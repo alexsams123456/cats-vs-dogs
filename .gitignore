@@ -1,0 +1,23 @@
+# Godot cache; keep source-side *.uid and *.import files under version control.
+/.godot/
+/.tools/
+/.artifacts/
+/build/
+
+# Local configuration and signing credentials.
+.env
+.env.*
+!.env.example
+export_credentials.cfg
+*.keystore
+*.jks
+*.p12
+*.pfx
+
+# Editor and operating system files.
+/.idea/
+/.vscode/
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak

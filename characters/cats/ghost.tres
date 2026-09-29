@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"ghost"
+species = "cat"
+display_name = "Тень"
+tagline = "СКВОЗЬ ПРЕГРАДЫ"
+description = "На 1,15 секунды проходит сквозь блоки. Собаки и земля остаются осязаемыми."
+ability_hint = "В полёте: кнопка «Сквозь блоки» или E. Один раз за бросок."
+ability_action = "Сквозь блоки"
+fur_color = Color(0.36, 0.36, 0.55, 1)
+accent_color = Color(0.64, 0.66, 0.87, 1)

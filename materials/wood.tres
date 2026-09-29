@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BlockMaterialDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/block_material_definition.gd" id="1_material"]
+
+[resource]
+script = ExtResource("1_material")
+id = &"wood"
+display_name = "Дерево"
+mass = 1.4
+impact_threshold = 345.0
+hit_points = 1
+friction = 0.9
+base_color = Color(0.780392, 0.541176, 0.313725, 1)
+edge_color = Color(0.470588, 0.313725, 0.207843, 1)
+detail_color = Color(0.643137, 0.423529, 0.254902, 1)
+highlight_color = Color(0.929412, 0.713725, 0.470588, 1)

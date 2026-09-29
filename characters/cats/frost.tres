@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"frost"
+species = "cat"
+display_name = "Снежок"
+tagline = "МОРОЗНЫЕ ЛАПКИ"
+description = "Замораживает близких собак на 2,4 секунды. Обездвиженные цели проще сбить."
+ability_hint = "В полёте: кнопка «Заморозить» или E. Один раз за бросок."
+ability_action = "Заморозить"
+fur_color = Color(0.87, 0.94, 0.97, 1)
+accent_color = Color(0.27, 0.66, 0.84, 1)

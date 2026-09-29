@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"scout"
+species = "dog"
+display_name = "Дружок"
+tagline = "ПЕРВЫЙ СОПЕРНИК"
+description = "Обычный защитник двора. Одного хорошего попадания достаточно."
+ability_hint = "Прямое попадание или обрушение блока."
+fur_color = Color(0.91, 0.87, 0.76, 1)
+accent_color = Color(0.37, 0.56, 0.48, 1)
+

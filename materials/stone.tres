@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BlockMaterialDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/block_material_definition.gd" id="1_material"]
+
+[resource]
+script = ExtResource("1_material")
+id = &"stone"
+display_name = "Камень"
+mass = 2.6
+impact_threshold = 430.0
+hit_points = 2
+friction = 0.95
+base_color = Color(0.623529, 0.654902, 0.615686, 1)
+edge_color = Color(0.337255, 0.407843, 0.396078, 1)
+detail_color = Color(0.490196, 0.54902, 0.509804, 1)
+highlight_color = Color(0.796078, 0.819608, 0.760784, 1)

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"jumper"
+species = "dog"
+display_name = "Шустрик"
+tagline = "ПРЫЖОК-УКЛОНЕНИЕ"
+description = "Подпрыгивает, когда кошка подлетает близко. Лови момент для удара."
+ability_hint = "Следи за прыжком и меняй траекторию."
+fur_color = Color(0.8, 0.63, 0.42, 1)
+accent_color = Color(0.72, 0.4, 0.23, 1)
+

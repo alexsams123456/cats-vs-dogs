@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="LevelDefinition" format=3 uid="uid://cysq5npk2ct60"]
+
+[ext_resource type="Script" uid="uid://n8twykmrmsc8" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Приём в полёте"
+dog_positions = PackedVector2Array(795, 455, 945, 595, 1095, 455)
+block_positions = PackedVector2Array(720, 560, 870, 560, 1020, 560, 1170, 560, 788.5, 490, 945, 490, 1101.5, 490, 720, 434, 870, 434, 1020, 434, 1170, 434, 789, 378, 945, 378, 1101, 378, 795, 360, 795, 343, 945, 360, 945, 343, 1095, 360, 1095, 343)
+block_sizes = PackedVector2Array(26, 120, 26, 120, 26, 120, 26, 120, 163, 20, 150, 20, 163, 20, 24, 92, 24, 92, 24, 92, 24, 92, 162, 20, 150, 20, 162, 20, 100, 16, 44, 18, 100, 16, 44, 18, 100, 16, 44, 18)
+block_materials = PackedStringArray("wood", "wood", "wood", "wood", "wood", "wood", "wood", "wood", "glass", "glass", "wood", "wood", "wood", "wood", "glass", "wood", "glass", "wood", "glass", "wood")
+dog_house_materials = null
+dog_house_types = null
+cat_sequence = PackedStringArray("splitter", "classic", "homing", "classic")
+dog_kinds = PackedStringArray("scout", "scout", "scout")
+tutorial = &"ability"
+par_shots = 2

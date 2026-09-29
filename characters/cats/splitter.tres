@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"splitter"
+species = "cat"
+display_name = "Тройка"
+tagline = "ТРИ ВМЕСТО ОДНОГО"
+description = "Разделяется на трёх маленьких котов. Они летят веером и задевают больше целей."
+ability_hint = "В полёте: кнопка «Разделиться» или E. Один раз за бросок."
+ability_action = "Разделиться"
+fur_color = Color(0.94, 0.82, 0.61, 1)
+accent_color = Color(0.77, 0.38, 0.27, 1)

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="LevelDefinition" format=3 uid="uid://dabs2oq083o1c"]
+
+[ext_resource type="Script" uid="uid://n8twykmrmsc8" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Первый бросок"
+shots = 3
+dog_positions = PackedVector2Array(810, 595, 1080, 595)
+block_positions = PackedVector2Array(740, 573, 880, 573, 810, 516, 740, 476, 880, 476, 810, 436, 810, 414, 1010, 573, 1150, 573, 1080, 516, 1010, 476, 1150, 476, 1080, 436, 1080, 414)
+block_sizes = PackedVector2Array(24, 94, 24, 94, 164, 20, 20, 60, 20, 60, 160, 20, 46, 24, 24, 94, 24, 94, 164, 20, 20, 60, 20, 60, 160, 20, 46, 24)
+block_materials = PackedStringArray("wood", "wood", "wood", "wood", "wood", "wood", "glass", "wood", "wood", "wood", "wood", "wood", "wood", "glass")
+dog_house_materials = null
+dog_house_types = null
+cat_sequence = PackedStringArray("classic", "classic", "classic")
+dog_kinds = PackedStringArray("scout", "scout")
+tutorial = &"aim"
+par_shots = 2

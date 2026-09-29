@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bixi4rga0refq"
+
+[deps]
+
+files=["res://translations/editor.ru.translation", "res://translations/editor.en.translation", "res://translations/editor.zh_CN.translation", "res://translations/editor.hi.translation", "res://translations/editor.es.translation", "res://translations/editor.fr.translation", "res://translations/editor.ar.translation", "res://translations/editor.pt.translation", "res://translations/editor.bn.translation", "res://translations/editor.ur.translation", "res://translations/editor.id.translation", "res://translations/editor.de.translation", "res://translations/editor.ja.translation"]
+
+source_file="res://translations/editor.csv"
+dest_files=["res://translations/editor.ru.translation", "res://translations/editor.en.translation", "res://translations/editor.zh_CN.translation", "res://translations/editor.hi.translation", "res://translations/editor.es.translation", "res://translations/editor.fr.translation", "res://translations/editor.ar.translation", "res://translations/editor.pt.translation", "res://translations/editor.bn.translation", "res://translations/editor.ur.translation", "res://translations/editor.id.translation", "res://translations/editor.de.translation", "res://translations/editor.ja.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

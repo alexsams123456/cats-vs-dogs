@@ -1,0 +1,18 @@
+* text=auto eol=lf
+*.gd text
+*.godot text
+*.tscn text
+*.tres text
+*.uid text
+*.import text
+*.cfg text
+*.md text
+*.ps1 text
+*.svg text
+*.png binary
+*.jpg binary
+*.webp binary
+*.ogg binary
+*.wav binary
+*.ttf binary
+*.woff2 binary

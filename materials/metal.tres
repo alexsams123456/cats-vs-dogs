@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BlockMaterialDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/block_material_definition.gd" id="1_material"]
+
+[resource]
+script = ExtResource("1_material")
+id = &"metal"
+display_name = "Металл"
+mass = 3.8
+impact_threshold = 520.0
+hit_points = 3
+friction = 0.7
+base_color = Color(0.482353, 0.607843, 0.682353, 1)
+edge_color = Color(0.227451, 0.337255, 0.435294, 1)
+detail_color = Color(0.364706, 0.486275, 0.580392, 1)
+highlight_color = Color(0.776471, 0.858824, 0.882353, 1)

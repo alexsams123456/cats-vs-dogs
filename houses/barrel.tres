@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="DogHouseDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/dog_house_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"barrel"
+display_name = "Бочка"
+description = "Небольшое круглое укрытие с обручами. Легче других конур и проще разбивается."
+size = Vector2(120, 112)
+dog_offset = Vector2(0, 31)
+extra_hit_points = 0
+mass_multiplier = 1.5

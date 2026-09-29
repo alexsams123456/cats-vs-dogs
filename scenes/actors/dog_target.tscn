@@ -1,0 +1,28 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/actors/dog_target.gd" id="1_dog"]
+[ext_resource type="Script" path="res://scripts/audio/dog_voice.gd" id="2_voice"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_dog"]
+friction = 0.85
+bounce = 0.03
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_dog"]
+radius = 25.0
+
+[node name="DogTarget" type="RigidBody2D" groups=["targets"]]
+collision_layer = 4
+collision_mask = 15
+mass = 1.0
+physics_material_override = SubResource("PhysicsMaterial_dog")
+max_contacts_reported = 8
+contact_monitor = true
+angular_damp = 1.6
+script = ExtResource("1_dog")
+impact_threshold = 205.0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_dog")
+
+[node name="Voice" type="AudioStreamPlayer" parent="."]
+script = ExtResource("2_voice")

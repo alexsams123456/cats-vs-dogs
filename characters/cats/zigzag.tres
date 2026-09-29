@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"zigzag"
+species = "cat"
+display_name = "Зигзаг"
+tagline = "ВОЛНОВОЙ ПОЛЁТ"
+description = "Первые мгновения летит волной: меняет высоту и бьёт под неожиданным углом."
+ability_hint = "Зигзаг включается после запуска."
+fur_color = Color(0.57, 0.48, 0.76, 1)
+accent_color = Color(0.42, 0.31, 0.65, 1)
+

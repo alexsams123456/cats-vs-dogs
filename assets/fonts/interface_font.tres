@@ -1,0 +1,12 @@
+[gd_resource type="FontVariation" load_steps=6 format=3]
+
+[ext_resource type="FontFile" path="res://assets/fonts/Nunito.ttf" id="1_nunito"]
+[ext_resource type="FontFile" path="res://assets/fonts/NotoSansArabicUI.ttf" id="2_arabic"]
+[ext_resource type="FontFile" path="res://assets/fonts/NotoSansBengali.ttf" id="3_bengali"]
+[ext_resource type="FontFile" path="res://assets/fonts/NotoSansDevanagari.ttf" id="4_devanagari"]
+[ext_resource type="FontFile" path="res://assets/fonts/NotoSansCJKsc-Regular.otf" id="5_cjk"]
+
+[resource]
+base_font = ExtResource("1_nunito")
+variation_opentype = {2003265652: 600.0}
+fallbacks = Array[Font]([ExtResource("2_arabic"), ExtResource("3_bengali"), ExtResource("4_devanagari"), ExtResource("5_cjk")])

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3 uid="uid://db1sj7316gyqf"]
+
+[ext_resource type="Script" uid="uid://csp6p17gsnnup" path="res://scripts/data/character_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"classic"
+display_name = "Рыжик"
+tagline = "СТРЕМИТЕЛЬНЫЙ РЫВОК"
+description = "В полёте резко ускоряется вперёд. Выбери момент, чтобы пробить оборону."
+ability_hint = "В полёте: кнопка «Рывок» или E. Один раз за бросок."
+ability_action = "Рывок"
+fur_color = Color(0.93, 0.58, 0.32, 1)
+accent_color = Color(0.77, 0.37, 0.19, 1)

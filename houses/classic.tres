@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="DogHouseDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/dog_house_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"classic"
+display_name = "Классическая"
+description = "Конура с двускатной крышей. Средний вес и прочность."
+size = Vector2(140, 124)
+dog_offset = Vector2(0, 37)
+extra_hit_points = 1
+mass_multiplier = 2.0

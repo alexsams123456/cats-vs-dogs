@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"wind"
+species = "cat"
+display_name = "Ветерок"
+tagline = "ПОРЫВ ВЕТРА"
+description = "Порывом ветра толкает близкие блоки и собак вперёд и вверх. Раскачай башню!"
+ability_hint = "В полёте: кнопка «Порыв» или E. Один раз за бросок."
+ability_action = "Порыв"
+fur_color = Color(0.63, 0.84, 0.72, 1)
+accent_color = Color(0.19, 0.60, 0.48, 1)

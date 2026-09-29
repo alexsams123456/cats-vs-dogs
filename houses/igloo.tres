@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="DogHouseDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/dog_house_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"igloo"
+display_name = "Иглу"
+description = "Широкий купол с арочным входом. Низкая тяжёлая конура с прочностью обычной будки."
+size = Vector2(176, 116)
+dog_offset = Vector2(0, 33)
+extra_hit_points = 1
+mass_multiplier = 2.4

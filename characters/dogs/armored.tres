@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"armored"
+species = "dog"
+display_name = "Бульдог"
+tagline = "ЗАЩИТНЫЙ ЩИТ"
+description = "Щит выдерживает первый сильный удар или взрыв. Затем Бульдог уязвим."
+ability_hint = "Сначала сбей щит, затем попади ещё раз."
+fur_color = Color(0.52, 0.62, 0.69, 1)
+accent_color = Color(0.24, 0.43, 0.57, 1)
+

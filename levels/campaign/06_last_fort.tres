@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="LevelDefinition" format=3 uid="uid://b83cq3f8k2i1g"]
+
+[ext_resource type="Script" uid="uid://n8twykmrmsc8" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Последняя крепость"
+biome = "glacier"
+shots = 9
+dog_positions = PackedVector2Array(622, 595, 827, 595, 1037, 595, 622, 411, 1037, 411)
+block_positions = PackedVector2Array(520, 538, 724, 538, 930, 538, 1144, 538, 614, 446, 827, 446, 1045, 446, 520, 388, 724, 388, 930, 388, 1144, 388, 614.5, 330, 827, 330, 1044.5, 330, 520, 292, 724, 292, 930, 292, 1144, 292, 615, 254, 827, 254, 1044, 254, 538, 229, 538, 208, 724, 229, 724, 208, 930, 229, 930, 208, 1126, 229, 1126, 208, 590, 312, 690, 312, 790, 312, 890, 312, 990, 312, 1090, 312, 840, 230, 570, 426, 670, 426, 770, 426, 880, 426, 985, 426, 1095, 426, 770, 408, 880, 408)
+block_sizes = PackedVector2Array(32, 164, 32, 164, 32, 164, 32, 164, 220, 20, 206, 20, 230, 20, 30, 96, 30, 96, 30, 96, 30, 96, 219, 20, 206, 20, 229, 20, 28, 56, 28, 56, 28, 56, 28, 56, 218, 20, 206, 20, 228, 20, 42, 30, 50, 12, 42, 30, 50, 12, 42, 30, 50, 12, 42, 30, 50, 12, 28, 16, 28, 16, 28, 16, 28, 16, 28, 16, 28, 16, 90, 28, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 16, 20, 16)
+block_materials = PackedStringArray("wood", "metal", "metal", "stone", "wood", "wood", "wood", "wood", "wood", "wood", "wood", "wood", "wood", "wood", "wood", "wood", "wood", "wood", "glass", "glass", "glass", "glass", "wood", "glass", "wood", "glass", "wood", "glass", "wood", "glass", "glass", "glass", "glass", "glass", "glass", "glass", "glass", "glass", "glass", "glass", "glass", "glass", "glass", "glass")
+dog_house_materials = PackedStringArray("glass", "", "glass", "", "")
+dog_house_types = PackedStringArray("fortress", "", "igloo", "", "")
+cat_sequence = PackedStringArray("ghost", "magnet", "bomb", "heavy", "wind", "splitter", "homing", "homing", "homing")
+dog_kinds = PackedStringArray("scout", "armored", "scout", "jumper", "armored")
+par_shots = 8

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"magnet"
+species = "cat"
+display_name = "Магнит"
+tagline = "КОШАЧЬЯ ТЯГА"
+description = "На 1,4 секунды притягивает к себе близкие блоки. Вытащи опору из башни."
+ability_hint = "В полёте: кнопка «Притянуть» или E. Действует на близкие блоки."
+ability_action = "Притянуть"
+fur_color = Color(0.72, 0.40, 0.47, 1)
+accent_color = Color(0.26, 0.44, 0.65, 1)

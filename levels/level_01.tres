@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="LevelDefinition" format=3 uid="uid://ba6boavmjnv0w"]
+
+[ext_resource type="Script" uid="uid://n8twykmrmsc8" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+dog_positions = PackedVector2Array(825, 595, 1080, 591)
+block_positions = PackedVector2Array(1022, 550, 1138, 550, 1080, 472)
+block_sizes = PackedVector2Array(34, 140, 34, 140, 170, 20)
+block_materials = PackedStringArray("stone", "metal", "glass")
+dog_house_materials = PackedStringArray("wood", "")

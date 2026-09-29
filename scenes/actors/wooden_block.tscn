@@ -1,0 +1,24 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/actors/wooden_block.gd" id="1_block"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_block"]
+friction = 0.9
+bounce = 0.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_block"]
+size = Vector2(34, 140)
+
+[node name="WoodenBlock" type="RigidBody2D" groups=["blocks"]]
+collision_layer = 8
+collision_mask = 15
+mass = 1.4
+physics_material_override = SubResource("PhysicsMaterial_block")
+max_contacts_reported = 8
+contact_monitor = true
+angular_damp = 0.6
+script = ExtResource("1_block")
+impact_threshold = 345.0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_block")

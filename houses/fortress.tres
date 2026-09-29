@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="DogHouseDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/dog_house_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"fortress"
+display_name = "Крепость"
+description = "Высокая конура с башенками и зубцами. Самая тяжёлая и прочная форма."
+size = Vector2(164, 156)
+dog_offset = Vector2(0, 53)
+extra_hit_points = 2
+mass_multiplier = 3.0

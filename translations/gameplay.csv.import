@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://dvb4grnm8ddy1"
+
+[deps]
+
+files=["res://translations/gameplay.ru.translation", "res://translations/gameplay.en.translation", "res://translations/gameplay.zh_CN.translation", "res://translations/gameplay.hi.translation", "res://translations/gameplay.es.translation", "res://translations/gameplay.fr.translation", "res://translations/gameplay.ar.translation", "res://translations/gameplay.pt.translation", "res://translations/gameplay.bn.translation", "res://translations/gameplay.ur.translation", "res://translations/gameplay.id.translation", "res://translations/gameplay.de.translation", "res://translations/gameplay.ja.translation"]
+
+source_file="res://translations/gameplay.csv"
+dest_files=["res://translations/gameplay.ru.translation", "res://translations/gameplay.en.translation", "res://translations/gameplay.zh_CN.translation", "res://translations/gameplay.hi.translation", "res://translations/gameplay.es.translation", "res://translations/gameplay.fr.translation", "res://translations/gameplay.ar.translation", "res://translations/gameplay.pt.translation", "res://translations/gameplay.bn.translation", "res://translations/gameplay.ur.translation", "res://translations/gameplay.id.translation", "res://translations/gameplay.de.translation", "res://translations/gameplay.ja.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

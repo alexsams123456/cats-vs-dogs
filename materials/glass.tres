@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BlockMaterialDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/block_material_definition.gd" id="1_material"]
+
+[resource]
+script = ExtResource("1_material")
+id = &"glass"
+display_name = "Стекло"
+mass = 0.8
+impact_threshold = 220.0
+hit_points = 1
+friction = 0.45
+base_color = Color(0.52549, 0.843137, 0.882353, 0.8)
+edge_color = Color(0.219608, 0.560784, 0.627451, 1)
+detail_color = Color(0.337255, 0.709804, 0.768627, 1)
+highlight_color = Color(0.886275, 0.988235, 1, 1)

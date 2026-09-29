@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/audio/background_music.gd" id="1"]
+[ext_resource type="AudioStream" path="res://assets/audio/music_meadow.wav" id="2"]
+
+[node name="BackgroundMusic" type="AudioStreamPlayer"]
+stream = ExtResource("2")
+volume_db = -18.0
+bus = &"Music"
+script = ExtResource("1")
+fade_in_seconds = 1.5

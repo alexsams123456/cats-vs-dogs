@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"homing"
+species = "cat"
+display_name = "Следопыт"
+tagline = "ЦЕЛЬ НАЙДЕНА"
+description = "На 1,35 секунды поворачивает к ближайшей собаке. Помоги ему выбрать удачный заход."
+ability_hint = "В полёте: кнопка «Навестись» или E. Один раз за бросок."
+ability_action = "Навестись"
+fur_color = Color(0.75, 0.66, 0.35, 1)
+accent_color = Color(0.36, 0.48, 0.27, 1)

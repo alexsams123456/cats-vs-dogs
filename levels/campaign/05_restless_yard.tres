@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="LevelDefinition" format=3 uid="uid://c7xd6klrgib3s"]
+
+[ext_resource type="Script" uid="uid://n8twykmrmsc8" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Непоседливый двор"
+biome = "glacier"
+shots = 8
+dog_positions = PackedVector2Array(760, 595, 1000, 594, 760, 435, 1000, 435, 760, 315)
+block_positions = PackedVector2Array(628, 550, 652, 550, 868, 550, 892, 550, 1120, 550, 749, 470, 1011, 470, 640, 410, 880, 410, 1120, 410, 751, 350, 1009, 350, 640, 305, 880, 305, 1120, 305, 752, 260, 1008, 260, 658, 237, 760, 237, 880, 237, 1000, 237, 1102, 237, 658, 218, 880, 218, 1102, 218, 695, 449, 695, 432, 695, 330, 825, 449, 825, 432, 825, 330, 935, 449, 935, 432, 935, 330, 1065, 449, 1065, 432, 1065, 330, 820, 245)
+block_sizes = PackedVector2Array(20, 140, 20, 140, 20, 140, 20, 140, 44, 140, 262, 20, 262, 20, 36, 100, 36, 100, 36, 100, 258, 20, 258, 20, 32, 70, 32, 70, 32, 70, 256, 20, 256, 20, 44, 26, 44, 26, 44, 26, 44, 26, 44, 26, 48, 12, 48, 12, 48, 12, 28, 22, 20, 12, 28, 20, 28, 22, 20, 12, 28, 20, 28, 22, 20, 12, 28, 20, 28, 22, 20, 12, 28, 20, 28, 10)
+block_materials = PackedStringArray("wood", "wood", "wood", "wood", "metal", "stone", "stone", "stone", "stone", "stone", "stone", "stone", "wood", "wood", "wood", "wood", "wood", "glass", "glass", "glass", "glass", "glass", "glass", "glass", "glass", "glass", "wood", "glass", "glass", "wood", "glass", "glass", "wood", "glass", "glass", "wood", "glass", "glass")
+dog_house_materials = PackedStringArray("glass", "stone", "", "", "")
+dog_house_types = PackedStringArray("igloo", "barrel", "", "", "")
+cat_sequence = PackedStringArray("frost", "zigzag", "splitter", "bomb", "wind", "heavy", "homing", "homing")
+dog_kinds = PackedStringArray("scout", "scout", "jumper", "armored", "jumper")
+par_shots = 6
