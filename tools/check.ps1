@@ -146,7 +146,7 @@ try {
     $KennelTypesArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'kennel-types.log'), '--script', 'res://tests/kennel_types_test.gd')
     $KennelTypesOutput = Invoke-GodotCheck -Name 'kennel-types' -Arguments $KennelTypesArguments
     Write-Host $KennelTypesOutput
-    foreach ($Suite in @('round_campaign', 'hud_help', 'result_feedback', 'aim_gesture', 'menu_reactions', 'touch_option_button', 'campaign', 'editor_recovery', 'biome', 'ambient_life', 'structural_load', 'world_audio', 'background_music', 'localization')) {
+    foreach ($Suite in @('round_campaign', 'hud_help', 'result_feedback', 'aim_gesture', 'menu_reactions', 'touch_option_button', 'campaign', 'editor_recovery', 'biome', 'ambient_life', 'sun_observer', 'structural_load', 'world_audio', 'background_music', 'localization')) {
         Write-Host "Running $Suite checks..."
         $SuiteArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath "$Suite.log"), '--script', "res://tests/${Suite}_test.gd")
         Write-Host (Invoke-GodotCheck -Name $Suite -Arguments $SuiteArguments)

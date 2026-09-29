@@ -5,6 +5,7 @@ extends Control
 signal hero_reacted(species: StringName)
 
 const HERO_VISUAL := preload("res://scripts/visuals/hero_visual.gd")
+const SUN_FACE := preload("res://scripts/visuals/sun_face.gd")
 const INK := Color("345c50")
 const PAPER := Color("fff6db")
 const REACTION_DURATION := 1.35
@@ -20,6 +21,7 @@ var showcase_visible: bool = true:
 
 var visual_time: float = 0.0
 var _motion: Control
+var _sun_face: SunFace
 var _frame_time: float = 0.0
 var _reaction_times: Array[float] = [-1.0, -1.0]
 var _reaction_variants: Array[int] = [0, 0]
@@ -34,6 +36,9 @@ var _mouse_down: bool = false
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_sun_face = SUN_FACE.new()
+	_sun_face.name = "SunFace"
+	add_child(_sun_face)
 	_motion = Control.new()
 	_motion.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_motion.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -42,6 +47,7 @@ func _ready() -> void:
 	resized.connect(_on_resized)
 	visibility_changed.connect(_on_visibility_changed)
 	_on_visibility_changed()
+	_on_resized()
 
 
 func _process(delta: float) -> void:
@@ -51,6 +57,12 @@ func _process(delta: float) -> void:
 			_reaction_times[index] += delta
 			if _reaction_times[index] >= REACTION_DURATION:
 				_reaction_times[index] = -1.0
+	var watched_hero := 0 if sin(visual_time * 0.35) >= 0.0 else 1
+	for index in 2:
+		if _reaction_times[index] >= 0.0:
+			watched_hero = index
+	_sun_face.focus_on(get_hero_transform(watched_hero == 0).origin)
+	_sun_face.advance(delta)
 	_frame_time += delta
 	if _frame_time < 1.0 / 30.0:
 		return
@@ -60,6 +72,10 @@ func _process(delta: float) -> void:
 
 func _on_resized() -> void:
 	_reset_pointer()
+	if is_instance_valid(_sun_face):
+		var scale_factor := size.y / 720.0
+		_sun_face.position = Vector2(size.x * 0.56, 188.0 * scale_factor)
+		_sun_face.scale = Vector2.ONE * scale_factor * (44.0 / 47.0)
 	queue_redraw()
 	if is_instance_valid(_motion):
 		_motion.queue_redraw()
@@ -81,6 +97,8 @@ func _notification(what: int) -> void:
 func reset_interactions() -> void:
 	_reset_pointer()
 	_reaction_times.assign([-1.0, -1.0])
+	if is_instance_valid(_sun_face):
+		_sun_face.reset()
 	if is_instance_valid(_motion):
 		_motion.queue_redraw()
 
@@ -159,6 +177,7 @@ func _finish_press(point: Vector2, blocked: bool) -> bool:
 		_reaction_times[index] = 0.0
 		_reaction_variants[index] = _next_variants[index]
 		_next_variants[index] = (_next_variants[index] + 1) % 2
+		_sun_face.react(&"delighted", REACTION_DURATION)
 		hero_reacted.emit(&"cat" if index == 0 else &"dog")
 		_motion.queue_redraw()
 	return index >= 0
@@ -197,11 +216,9 @@ func _draw_sky(width: float) -> void:
 	draw_polygon(PackedVector2Array([
 		Vector2.ZERO, Vector2(width, 0), Vector2(width, 720), Vector2(0, 720)
 	]), PackedColorArray([Color("fff3d5"), Color("f8edcf"), Color("cedcc0"), Color("e1e6bc")]))
-	var sun := Vector2(width * 0.60, 188)
+	var sun := Vector2(width * 0.56, 188)
 	for index in range(5, 0, -1):
 		draw_circle(sun, 48.0 + float(index) * 20.0, Color(1.0, 0.94, 0.65, 0.07))
-	draw_circle(sun, 44, Color("ffe7a0"))
-	draw_circle(sun - Vector2(5, 6), 35, Color(1.0, 0.96, 0.76, 0.45))
 	# Едва заметные солнечные полосы объединяют иллюстрацию и карточку меню.
 	draw_colored_polygon(PackedVector2Array([
 		Vector2(width * 0.53, 0), Vector2(width * 0.66, 0),

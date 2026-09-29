@@ -7,6 +7,7 @@
 [ext_resource type="Resource" uid="uid://ba6boavmjnv0w" path="res://levels/level_01.tres" id="5"]
 [ext_resource type="Script" uid="uid://dn4a3h2l1uujy" path="res://scripts/visuals/cat_queue.gd" id="6"]
 [ext_resource type="Script" uid="uid://0yu4ehaarc4e" path="res://scripts/gameplay/game_camera.gd" id="7"]
+[ext_resource type="Script" path="res://scripts/world/sun_observer.gd" id="8"]
 
 [sub_resource type="RectangleShape2D" id="GroundShape"]
 size = Vector2(4000, 200)
@@ -40,3 +41,6 @@ script = ExtResource("7")
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1144177167]
 script = ExtResource("4")
+
+[node name="SunObserver" type="Node" parent="."]
+script = ExtResource("8")

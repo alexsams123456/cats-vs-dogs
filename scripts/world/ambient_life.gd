@@ -4,10 +4,11 @@ extends Node2D
 
 const MEADOW_TREE := preload("res://scripts/world/meadow_tree.gd")
 const SCENERY_PINE := preload("res://scripts/world/scenery_pine.gd")
+const SUN_FACE := preload("res://scripts/visuals/sun_face.gd")
 const PINE_ROOTS := [Vector3(-38, 609, 155), Vector3(70, 608, 111), Vector3(149, 604, 77), Vector3(1179, 603, 107), Vector3(1328, 618, 173), Vector3(1430, 616, 127)]
 const LEAF_COLORS := [Color("b5b975"), Color("d4bd77"), Color("92ad72")]
 const ICE_TIPS := [Vector2(65, 577), Vector2(128, 591), Vector2(397, 592), Vector2(1182, 589), Vector2(1279, 558), Vector2(1428, 578)]
-const CLOUD_HEIGHTS := [161.0, 112.0, 247.0, 194.0]
+const CLOUD_HEIGHTS := [90.0, 112.0, 247.0, 194.0]
 const CLOUD_SCALES := [0.83, 0.52, 0.61, 0.43]
 const CLOUD_SPEEDS := [7.0, 4.2, 9.5, 5.3]
 const GRASS_POSITIONS := [
@@ -44,10 +45,16 @@ var _breeze_line := PackedVector2Array()
 var _time: float = 0.0
 var _visible_world := Rect2(0, 0, 1280, 720)
 var biome: StringName = &"backyard"
+var sun_face: SunFace
 
 
 func _ready() -> void:
 	_build_cloud_shapes()
+	sun_face = SUN_FACE.new()
+	sun_face.name = "SunFace"
+	sun_face.position = SUN_CENTER
+	sun_face.show_behind_parent = true
+	add_child(sun_face)
 	_add_tree(Vector2(25, 620), Vector2(0.95, 0.95), false)
 	_add_tree(Vector2(1340, 620), Vector2(-1.06, 1.06), true)
 	for item: Vector3 in PINE_ROOTS:
@@ -63,6 +70,8 @@ func _ready() -> void:
 
 func set_biome(value: StringName) -> void:
 	biome = value
+	if is_instance_valid(sun_face):
+		sun_face.visible = biome != &"glacier"
 	for tree: Node2D in _trees:
 		tree.visible = biome == &"backyard"
 	for pine: Node2D in _pines:
@@ -90,6 +99,8 @@ func _add_tree(root: Vector2, tree_scale: Vector2, warm: bool) -> void:
 func advance(delta: float, elapsed: float, visible_world: Rect2) -> void:
 	_time = elapsed
 	_visible_world = visible_world
+	if is_instance_valid(sun_face) and sun_face.visible:
+		sun_face.advance(delta)
 	for index in _cloud_x.size():
 		_cloud_x[index] += delta * CLOUD_SPEEDS[index]
 		var clearance: float = 120.0 * CLOUD_SCALES[index] + 24.0
@@ -113,7 +124,6 @@ func _draw() -> void:
 		_draw_ice_shimmer()
 		_draw_snow_drift()
 		return
-	_draw_sun()
 	for index in _cloud_x.size():
 		var bob := sin(_time * 0.24 + float(index) * 2.0) * 2.5
 		_draw_cloud(Vector2(_cloud_x[index], CLOUD_HEIGHTS[index] + bob), CLOUD_SCALES[index])
@@ -228,14 +238,6 @@ func _draw_mountain_breeze() -> void:
 		var phase := float(index) * 1.7
 		var point := Vector2(732.0 + sin(_time * 0.5 + phase) * 30.0 + float(index % 3) * 29.0, 542.0 + float(index) * 9.0)
 		draw_line(point - Vector2(5.0 + sin(phase) * 3.0, 0), point + Vector2(5, 0), Color(0.87, 0.97, 0.94, 0.22 + sin(_time + phase) * 0.1), 1.3, true)
-
-
-func _draw_sun() -> void:
-	var breath := sin(_time * 0.48) * 1.5
-	for layer in range(6, 0, -1):
-		draw_circle(SUN_CENTER, 46.0 + float(layer) * 11.0 + breath, Color(1.0, 0.93, 0.69, 0.025), true, -1.0, true)
-	draw_circle(SUN_CENTER, 47.0, Color("f9e8b4"), true, -1.0, true)
-	draw_circle(SUN_CENTER + Vector2(-2, -3), 43.0, Color("fff1c7"), true, -1.0, true)
 
 
 func _draw_cloud(center: Vector2, scale_factor: float) -> void:
