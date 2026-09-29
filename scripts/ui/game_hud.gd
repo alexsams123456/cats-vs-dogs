@@ -23,6 +23,10 @@ var _hint: Label
 var _overlay: ColorRect
 var _result_title: Label
 var _result_detail: Label
+var _result_celebration: ResultCelebration
+var _result_cast: PackedStringArray = PackedStringArray()
+var _overlay_content: VBoxContainer
+var _overlay_sound: SoundControls
 var _resume_button: Button
 var _pause_button: Button
 var _overlay_menu_button: Button
@@ -260,6 +264,9 @@ func update_status(level_title: String, cats: int, dogs: int, flying: bool) -> v
 
 
 func show_pause(value: bool) -> void:
+	_result_celebration.stop()
+	_overlay_sound.show()
+	_overlay_content.add_theme_constant_override("separation", 20)
 	_overlay.visible = value
 	_resume_button.visible = value
 	_next_button.hide()
@@ -270,9 +277,22 @@ func show_pause(value: bool) -> void:
 	_pause_button.text = "Продолжить" if value else "Пауза"
 
 
+func set_result_cast(kinds: PackedStringArray) -> void:
+	_result_cast = kinds.duplicate()
+
+
 func show_result(won: bool, shots_used: int = 0, stars: int = 0) -> void:
 	_result_shown = true
 	_overlay.show()
+	_overlay_content.add_theme_constant_override("separation", 12)
+	_overlay_sound.hide()
+	if won:
+		var kinds := _result_cast
+		if kinds.is_empty() and _cat_definition != null:
+			kinds = PackedStringArray([String(_cat_definition.id)])
+		_result_celebration.start(kinds)
+	else:
+		_result_celebration.stop()
 	_resume_button.hide()
 	_pause_details.hide()
 	_result_detail.show()
@@ -390,6 +410,7 @@ func _build_overlay() -> void:
 	card.add_theme_stylebox_override("panel", style)
 	center.add_child(card)
 	var content := VBoxContainer.new()
+	_overlay_content = content
 	content.add_theme_constant_override("separation", 20)
 	card.add_child(content)
 	_result_title = _label("", 36)
@@ -397,6 +418,8 @@ func _build_overlay() -> void:
 	_result_title.custom_minimum_size.x = 528
 	_result_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(_result_title)
+	_result_celebration = ResultCelebration.new()
+	content.add_child(_result_celebration)
 	_result_detail = _label("", 21)
 	_result_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_result_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -418,7 +441,8 @@ func _build_overlay() -> void:
 	content.add_child(_next_button)
 	_resume_button = _button("Продолжить", pause_requested.emit)
 	content.add_child(_resume_button)
-	content.add_child(SoundControls.new())
+	_overlay_sound = SoundControls.new()
+	content.add_child(_overlay_sound)
 	content.add_child(_button("Сыграть заново", restart_requested.emit))
 	_overlay_menu_button = _button("К песочнице", menu_requested.emit)
 	content.add_child(_overlay_menu_button)

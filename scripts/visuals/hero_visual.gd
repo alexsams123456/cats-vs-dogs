@@ -97,6 +97,9 @@ static func _markings(canvas: CanvasItem, kind: StringName, accent: Color, cat: 
 static func _face(canvas: CanvasItem, accent: Color, time: float, phase: float, expression: StringName, cat: bool) -> void:
 	var blink: float = _blink(time, phase)
 	var smile: float = _idle_smile(time, phase) if expression == &"idle" else 0.0
+	if expression == &"celebrate":
+		smile = 1.0
+		blink = 0.0
 	var gaze := Vector2(sin(time * 1.25 + phase) * 0.85, 0.3 - smile * 0.25)
 	blink *= 1.0 - smile * 0.18
 	if expression == &"aim":

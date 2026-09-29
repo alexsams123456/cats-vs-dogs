@@ -57,6 +57,9 @@
 | `scripts/levels/campaign_catalog.gd`, `levels/campaign/` | Три главы по два уровня, постоянные ID прогресса, окружение, постройки и отряды |
 | `scripts/ui/campaign_menu.gd` | Главное меню, страницы кампании и личного рейтинга, продолжение игры, вход в песочницу и редактор, адаптивная раскладка и анимация переходов |
 | `scripts/ui/menu_backdrop.gd`, `scripts/ui/menu_icon.gd` | Собственный рисунок солнечного двора, анимация героев и деталей, масштабируемые иконки меню |
+| `scripts/ui/result_celebration.gd`, `tests/result_feedback_test.gd` | Короткая сценка победы с котами отряда; доступность действий, пауза и раскладка результата |
+| `scripts/visuals/aim_gesture.gd`, `tests/aim_gesture_test.gd` | Наглядный жест первого броска; скрытие при вводе, паузе и завершении попытки |
+| `tests/menu_reactions_test.gd`, `tools/capture_playful_feedback.gd` | Реакции зверей меню на мышь/касание и графический просмотр новых анимаций |
 | `scripts/ui/campaign_biome_icon.gd` | Процедурные мини-пейзажи двора, гор и ледяной долины в заголовках глав кампании |
 | `assets/fonts/Nunito.ttf`, `assets/fonts/OFL.txt` | Локальный шрифт меню Nunito и его лицензия SIL OFL 1.1; источник описан в `assets/fonts/README.md` |
 | `scripts/ui/game_localization.gd`, `translations/*.csv` | Список 13 языков, нормализация локали, переводы меню, боя, героев и редактора через `TranslationServer` |

@@ -14,6 +14,7 @@ const DOG_SCENE := preload("res://scenes/actors/dog_target.tscn")
 const BLOCK_SCENE := preload("res://scenes/actors/wooden_block.tscn")
 const HOUSE_SCENE := preload("res://scenes/actors/dog_house.tscn")
 const MUSIC_SCENE := preload("res://scenes/audio/background_music.tscn")
+const AimGestureVisual := preload("res://scripts/visuals/aim_gesture.gd")
 const MIN_FLIGHT_TIME := 1.2
 const SETTLE_TIME := 0.8
 const MAX_FLIGHT_TIME := 10.0
@@ -35,6 +36,7 @@ var _still_time: float = 0.0
 var _active_cat: CatProjectile
 var _tutorial_ability_used: bool = false
 var _tutorial_shelter_opened: bool = false
+var _aim_gesture: AimGestureVisual
 
 @onready var actors: Node2D = $Actors
 @onready var slingshot: Slingshot = $Slingshot
@@ -62,6 +64,7 @@ func _ready() -> void:
 	hud.camera_reset_requested.connect(camera.reset_view)
 	hud.set_editor_preview(editor_preview)
 	hud.set_campaign(campaign_mode, has_next_level, level.par_shots)
+	hud.set_result_cast(level.cat_sequence if not level.cat_sequence.is_empty() else PackedStringArray([String(cat_definition.id)]))
 	slingshot.launched.connect(_on_launched)
 	camera.aim_cancel_requested.connect(slingshot.cancel_drag)
 	for index in level.block_positions.size():
@@ -88,6 +91,10 @@ func _ready() -> void:
 		if house != null:
 			dog.enter_shelter(house)
 	_load_cat()
+	if campaign_mode and not editor_preview and level.tutorial == &"aim":
+		_aim_gesture = AimGestureVisual.new()
+		_aim_gesture.name = "AimGesture"
+		slingshot.add_child(_aim_gesture)
 	_update_hud()
 
 
@@ -251,6 +258,8 @@ func _on_shelter_destroyed() -> void:
 
 
 func _refresh_tutorial() -> void:
+	if is_instance_valid(_aim_gesture):
+		_aim_gesture.set_enabled(state == RoundState.READY and shots_left == level.shots)
 	if level == null or state == RoundState.WON or state == RoundState.LOST:
 		return
 	var message := ""

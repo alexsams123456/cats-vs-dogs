@@ -2,13 +2,18 @@ class_name MenuBackdrop
 extends Control
 ## Собственная иллюстрация двора: пейзаж кэшируется, живые детали рисуются отдельно.
 
+signal hero_reacted(species: StringName)
+
 const HERO_VISUAL := preload("res://scripts/visuals/hero_visual.gd")
 const INK := Color("345c50")
 const PAPER := Color("fff6db")
+const REACTION_DURATION := 1.35
 
 var showcase_visible: bool = true:
 	set(value):
 		showcase_visible = value
+		if not value:
+			reset_interactions()
 		queue_redraw()
 		if is_instance_valid(_motion):
 			_motion.queue_redraw()
@@ -16,6 +21,14 @@ var showcase_visible: bool = true:
 var visual_time: float = 0.0
 var _motion: Control
 var _frame_time: float = 0.0
+var _reaction_times: Array[float] = [-1.0, -1.0]
+var _reaction_variants: Array[int] = [0, 0]
+var _next_variants: Array[int] = [0, 0]
+var _touches: Dictionary = {}
+var _touch_index: int = -1
+var _pressed_hero: int = -1
+var _press_position := Vector2.ZERO
+var _mouse_down: bool = false
 
 
 func _ready() -> void:
@@ -33,6 +46,11 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	visual_time += delta
+	for index in 2:
+		if _reaction_times[index] >= 0.0:
+			_reaction_times[index] += delta
+			if _reaction_times[index] >= REACTION_DURATION:
+				_reaction_times[index] = -1.0
 	_frame_time += delta
 	if _frame_time < 1.0 / 30.0:
 		return
@@ -41,6 +59,7 @@ func _process(delta: float) -> void:
 
 
 func _on_resized() -> void:
+	_reset_pointer()
 	queue_redraw()
 	if is_instance_valid(_motion):
 		_motion.queue_redraw()
@@ -48,6 +67,113 @@ func _on_resized() -> void:
 
 func _on_visibility_changed() -> void:
 	set_process(is_visible_in_tree())
+	if not is_visible_in_tree():
+		reset_interactions()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		reset_interactions()
+	elif what == NOTIFICATION_PAUSED:
+		_reset_pointer()
+
+
+func reset_interactions() -> void:
+	_reset_pointer()
+	_reaction_times.assign([-1.0, -1.0])
+	if is_instance_valid(_motion):
+		_motion.queue_redraw()
+
+
+func _reset_pointer() -> void:
+	_touches.clear()
+	_touch_index = -1
+	_pressed_hero = -1
+	_mouse_down = false
+
+
+func handle_pointer_event(event: InputEvent, blocked: bool = false) -> bool:
+	if not showcase_visible or not is_visible_in_tree() or not can_process():
+		_reset_pointer()
+		return false
+	if event is InputEventScreenTouch:
+		return _handle_touch(event, blocked)
+	if event is InputEventScreenDrag:
+		if event.index == _touch_index:
+			_cancel_drag(event.position)
+		return _pressed_hero >= 0 and event.index == _touch_index
+	if event is InputEventMouse and event.device == InputEvent.DEVICE_ID_EMULATION:
+		return false
+	if not _touches.is_empty():
+		return false
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_mouse_down = true
+			_begin_press(event.position, blocked)
+			return _pressed_hero >= 0
+		if _mouse_down:
+			_mouse_down = false
+			return _finish_press(event.position, blocked)
+	elif event is InputEventMouseMotion and _mouse_down:
+		_cancel_drag(event.position)
+	return false
+
+
+func _handle_touch(event: InputEventScreenTouch, blocked: bool) -> bool:
+	if event.pressed and not event.canceled:
+		if _touches.has(event.index):
+			return false
+		_touches[event.index] = true
+		if _touches.size() == 1:
+			_touch_index = event.index
+			_mouse_down = false
+			_begin_press(event.position, blocked)
+		return event.index == _touch_index and _pressed_hero >= 0
+	_touches.erase(event.index)
+	if event.index != _touch_index:
+		return false
+	_touch_index = -1
+	if event.canceled:
+		var captured := _pressed_hero >= 0
+		_pressed_hero = -1
+		return captured
+	return _finish_press(event.position, blocked)
+
+
+func _begin_press(point: Vector2, blocked: bool) -> void:
+	_press_position = point
+	_pressed_hero = -1 if blocked else hero_at_position(point)
+
+
+func _cancel_drag(point: Vector2) -> void:
+	if point.distance_to(_press_position) > 32.0 * size.y / 720.0:
+		_pressed_hero = -1
+
+
+func _finish_press(point: Vector2, blocked: bool) -> bool:
+	var index := _pressed_hero
+	_cancel_drag(point)
+	var activate := index >= 0 and _pressed_hero == index and not blocked and hero_at_position(point) == index
+	_pressed_hero = -1
+	if activate and _reaction_times[index] < 0.0:
+		_reaction_times[index] = 0.0
+		_reaction_variants[index] = _next_variants[index]
+		_next_variants[index] = (_next_variants[index] + 1) % 2
+		hero_reacted.emit(&"cat" if index == 0 else &"dog")
+		_motion.queue_redraw()
+	return index >= 0
+
+
+func hero_at_position(viewport_point: Vector2) -> int:
+	if not showcase_visible or size.y <= 0.0:
+		return -1
+	var local_point := get_global_transform_with_canvas().affine_inverse() * viewport_point
+	# Тот же transform, что у рисунка: попадание следует за прыжком, наклоном и resize.
+	for index in [1, 0]:
+		var point := get_hero_transform(index == 0).affine_inverse() * local_point
+		if (point / Vector2(31, 34)).length_squared() <= 1.0:
+			return index
+	return -1
 
 
 func _draw() -> void:
@@ -255,8 +381,8 @@ func _draw_motion() -> void:
 		var opacity: float = 0.22 + sin(visual_time * 0.8 + phase) * 0.12
 		_motion.draw_circle(point, 2.0 + float(index % 2), Color(1.0, 0.97, 0.76, opacity))
 	if showcase_visible:
-		_draw_hero(width, scale_factor, true)
-		_draw_hero(width, scale_factor, false)
+		_draw_hero(true)
+		_draw_hero(false)
 	_motion.draw_set_transform(Vector2.ZERO)
 
 
@@ -268,16 +394,70 @@ func _draw_cloud(center: Vector2, cloud_scale: float) -> void:
 	_ellipse(_motion, center + Vector2(48, -8) * cloud_scale, Vector2(28, 21) * cloud_scale, shade)
 
 
-func _draw_hero(width: float, scale_factor: float, cat: bool) -> void:
+func get_hero_transform(cat: bool) -> Transform2D:
+	var scale_factor: float = maxf(size.y / 720.0, 0.001)
+	var width: float = size.x / scale_factor
 	var art_scale: float = clampf(width / 1280.0, 0.78, 1.08)
 	var phase: float = 0.0 if cat else 2.4
 	var breathing: float = sin(visual_time * 1.7 + phase)
 	var hero_position := Vector2(width * (0.315 if cat else 0.495), 545 if cat else 530)
 	hero_position.y += breathing * 1.7
 	var stretch := Vector2(1.0 - breathing * 0.008, 1.0 + breathing * 0.012)
+	var rotation_angle: float = sin(visual_time * 0.9 + phase) * 0.025
+	var index: int = 0 if cat else 1
+	var elapsed: float = _reaction_times[index]
+	if elapsed >= 0.0:
+		var progress: float = clampf(elapsed / REACTION_DURATION, 0.0, 1.0)
+		var envelope: float = sin(progress * PI)
+		if cat and _reaction_variants[index] == 0:
+			var hop: float = sin(clampf((progress - 0.1) / 0.62, 0.0, 1.0) * PI)
+			hero_position.y -= hop * 48.0 * art_scale
+			stretch *= Vector2(1.0 - hop * 0.10, 1.0 + hop * 0.13)
+			rotation_angle += sin(progress * TAU) * envelope * 0.12
+		elif cat:
+			stretch *= Vector2(1.0 + envelope * 0.18, 1.0 - envelope * 0.12)
+			hero_position.y += envelope * 8.0 * art_scale
+			rotation_angle -= envelope * 0.16
+		else:
+			var hop: float = absf(sin(progress * TAU)) * envelope
+			hero_position.y -= hop * (37.0 if _reaction_variants[index] == 0 else 23.0) * art_scale
+			stretch *= Vector2(1.0 + hop * 0.09, 1.0 - hop * 0.06)
+			rotation_angle += sin(progress * TAU * 2.0) * envelope * 0.13
 	var hero_scale: float = (3.0 if cat else 2.7) * art_scale * scale_factor
-	_motion.draw_set_transform(hero_position * scale_factor, sin(visual_time * 0.9 + phase) * 0.025, stretch * hero_scale)
-	HERO_VISUAL.paint(_motion, &"cat" if cat else &"dog", &"classic" if cat else &"jumper", Color("efab63") if cat else Color("d0a079"), Color("cb7051") if cat else Color("507f78"), visual_time, phase, &"idle")
+	return Transform2D(rotation_angle, stretch * hero_scale, 0.0, hero_position * scale_factor)
+
+
+func _draw_hero(cat: bool) -> void:
+	var index: int = 0 if cat else 1
+	var elapsed: float = _reaction_times[index]
+	var reacting: bool = elapsed >= 0.0
+	_motion.draw_set_transform_matrix(get_hero_transform(cat))
+	HERO_VISUAL.paint(_motion, &"cat" if cat else &"dog", &"classic" if cat else &"jumper", Color("efab63") if cat else Color("d0a079"), Color("cb7051") if cat else Color("507f78"), visual_time + maxf(elapsed, 0.0) * 1.6, 0.0 if cat else 2.4, &"celebrate" if reacting else &"idle")
+	if reacting:
+		_draw_affection(elapsed, cat)
+
+
+func _draw_affection(elapsed: float, cat: bool) -> void:
+	for index in 3:
+		var progress: float = clampf((elapsed - float(index) * 0.15) / 0.85, 0.0, 1.0)
+		if progress <= 0.0 or progress >= 1.0:
+			continue
+		var opacity: float = sin(progress * PI)
+		var center := Vector2(float(index - 1) * 16.0, -37.0 - progress * 22.0)
+		var tint := Color("e88980") if cat else Color("efbc60")
+		tint.a = opacity
+		if cat:
+			var heart := PackedVector2Array()
+			for segment in 32:
+				var angle: float = float(segment) * TAU / 32.0
+				var x: float = 16.0 * pow(sin(angle), 3.0)
+				var y: float = -(13.0 * cos(angle) - 5.0 * cos(2.0 * angle) - 2.0 * cos(3.0 * angle) - cos(4.0 * angle))
+				heart.append(center + Vector2(x, y) * 0.37)
+			_motion.draw_colored_polygon(heart, tint)
+		else:
+			_ellipse(_motion, center + Vector2(0, 2), Vector2(4.1, 3.4), tint)
+			for toe in 3:
+				_motion.draw_circle(center + Vector2(float(toe - 1) * 3.7, -3.0 - (1.5 if toe == 1 else 0.0)), 2.0, tint)
 
 
 func _ellipse(canvas: CanvasItem, center: Vector2, radius: Vector2, color: Color) -> void:

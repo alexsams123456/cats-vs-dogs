@@ -49,6 +49,7 @@ var _transition: Tween
 var _bold_font: FontVariation
 var _button_tweens: Dictionary = {}
 var _previous_quit_on_go_back: bool = true
+var _menu_windows: Array[Window] = []
 
 
 func _ready() -> void:
@@ -87,6 +88,10 @@ func _ready() -> void:
 	_build_home(pages)
 	_build_campaign(pages)
 	_build_rating(pages)
+	for node in find_children("*", "Window", true, false):
+		var window := node as Window
+		_menu_windows.append(window)
+		window.about_to_popup.connect(_backdrop.reset_interactions)
 	resized.connect(_update_layout)
 	_home.resized.connect(_layout_home)
 	_home_panel.minimum_size_changed.connect(_layout_home)
@@ -426,6 +431,15 @@ func show_page(page_id: StringName) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventMouse or event is InputEventScreenTouch or event is InputEventScreenDrag:
+		var blocked: bool = page != &"home" or not is_visible_in_tree()
+		for window in _menu_windows:
+			blocked = blocked or window.visible
+		var point: Vector2 = event.position
+		blocked = blocked or _home_panel.get_global_rect().has_point(point)
+		if _backdrop.handle_pointer_event(event, blocked):
+			get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and page != &"home":
 		show_page(&"home")
 		get_viewport().set_input_as_handled()
