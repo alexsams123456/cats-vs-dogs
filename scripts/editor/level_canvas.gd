@@ -6,8 +6,9 @@ signal edit_started
 signal edit_finished
 signal selection_changed
 signal tool_changed
+signal placement_rejected(message: String)
 
-enum Tool { SELECT, DOG, POST, BEAM, BOX, DOG_HOUSE, TOWER }
+enum Tool { SELECT, DOG, POST, BEAM, BOX, DOG_HOUSE, TOWER, HANGING_WEIGHT, BUILDING }
 
 const WORLD_SIZE := Vector2(1280, 720)
 const BUILD_AREA := Rect2(400, 100, 840, 520)
@@ -23,7 +24,10 @@ var draft: LevelDefinition:
 var tool: Tool = Tool.SELECT
 var material_id: StringName = &"wood"
 var house_type: StringName = &"classic"
+var building_index: int = 0
 var grid_enabled: bool = true
+var show_guides: bool = true
+var read_only: bool = false
 var selected_kind: int = -1
 var selected_index: int = -1
 var _pointer: int = NO_POINTER
@@ -88,10 +92,14 @@ func selected_position() -> Vector2:
 		return draft.dog_positions[selected_index]
 	if selected_kind == 1:
 		return draft.block_positions[selected_index]
+	if selected_kind == 2:
+		return draft.weight_positions[selected_index]
 	return Vector2.ZERO
 
 
 func selected_size() -> Vector2:
+	if selected_kind == 2:
+		return HangingWeightVisual.BOUNDS.size
 	if selected_kind == 1:
 		return draft.block_sizes[selected_index]
 	if selected_kind == 0 and not draft.dog_house_material_at(selected_index).is_empty():
@@ -140,6 +148,8 @@ func set_selected_material(value: StringName) -> void:
 
 
 func _selection_offset() -> Vector2:
+	if selected_kind == 2:
+		return HangingWeightVisual.BOUNDS.get_center()
 	if selected_kind == 0 and not selected_material().is_empty():
 		return -DogHouse.offset_for(selected_house_type())
 	return Vector2.ZERO
@@ -157,6 +167,8 @@ func move_selected(point: Vector2) -> void:
 	point = constrain_position(point + offset, selected_size()) - offset
 	if selected_kind == 0:
 		draft.dog_positions[selected_index] = point
+	elif selected_kind == 2:
+		draft.weight_positions[selected_index] = point
 	else:
 		draft.block_positions[selected_index] = point
 	selection_changed.emit()
@@ -175,6 +187,8 @@ func delete_selected() -> void:
 			draft.dog_kinds.remove_at(selected_index)
 		draft.dog_house_materials.remove_at(selected_index)
 		draft.dog_house_types.remove_at(selected_index)
+	elif selected_kind == 2:
+		draft.weight_positions.remove_at(selected_index)
 	else:
 		draft.block_positions.remove_at(selected_index)
 		draft.block_sizes.remove_at(selected_index)
@@ -195,7 +209,7 @@ func rotate_selected() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if _pointer != NO_POINTER or draft == null:
+	if read_only or _pointer != NO_POINTER or draft == null:
 		return
 	if event is InputEventMouseButton and event.device != -1:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
@@ -207,7 +221,7 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if _pointer == NO_POINTER:
+	if read_only or _pointer == NO_POINTER:
 		return
 	var released := false
 	var point := Vector2.ZERO
@@ -251,7 +265,15 @@ func _begin(point: Vector2, pointer: int) -> void:
 			_add_object(point)
 		return
 	clear_selection()
+	for index in range(draft.weight_positions.size() - 1, -1, -1):
+		var bounds := Rect2(draft.weight_positions[index] + HangingWeightVisual.BOUNDS.position, HangingWeightVisual.BOUNDS.size)
+		if bounds.grow(8.0 / _scale_factor()).has_point(point):
+			selected_kind = 2
+			selected_index = index
+			break
 	for index in range(draft.dog_positions.size() - 1, -1, -1):
+		if selected_kind >= 0:
+			break
 		var dog_point := draft.dog_positions[index]
 		var type_id := draft.dog_house_type_at(index)
 		var house_size := DogHouse.size_for(type_id)
@@ -278,14 +300,23 @@ func _begin(point: Vector2, pointer: int) -> void:
 
 
 func _add_object(point: Vector2) -> void:
+	if tool == Tool.BUILDING:
+		_add_building(point)
+		return
 	var adds_dog := tool == Tool.DOG or tool == Tool.DOG_HOUSE
+	var adds_weight := tool == Tool.HANGING_WEIGHT
 	var block_count := 3 if tool == Tool.TOWER else 1
-	if (adds_dog and draft.dog_positions.size() >= 200) or (not adds_dog and draft.block_positions.size() + block_count > 200):
+	if (adds_dog and draft.dog_positions.size() >= LevelDefinition.MAX_OBJECTS) or (adds_weight and draft.weight_positions.size() >= LevelDefinition.MAX_OBJECTS) or (not adds_dog and not adds_weight and draft.block_positions.size() + block_count > LevelDefinition.MAX_OBJECTS):
 		return
 	edit_started.emit()
 	draft.normalize_materials()
 	point = _snap(point)
-	if adds_dog:
+	if adds_weight:
+		selected_kind = 2
+		selected_index = draft.weight_positions.size()
+		var offset := HangingWeightVisual.BOUNDS.get_center()
+		draft.weight_positions.append(constrain_position(point + offset, HangingWeightVisual.BOUNDS.size) - offset)
+	elif adds_dog:
 		selected_kind = 0
 		selected_index = draft.dog_positions.size()
 		if not draft.dog_kinds.is_empty():
@@ -328,6 +359,23 @@ func _append_block(point: Vector2, dimensions: Vector2) -> void:
 	draft.block_materials.append(String(material_id))
 
 
+func _add_building(point: Vector2) -> void:
+	var addition := BuildingTemplates.at_position(building_index, _snap(point))
+	var error := BuildingTemplates.placement_error(draft, addition)
+	if not error.is_empty():
+		placement_rejected.emit(error)
+		return
+	edit_started.emit()
+	BuildingTemplates.append_to(draft, addition)
+	selected_kind = 1
+	selected_index = draft.block_positions.size() - 1
+	tool = Tool.SELECT
+	tool_changed.emit()
+	selection_changed.emit()
+	edit_finished.emit()
+	queue_redraw()
+
+
 func _snap(point: Vector2) -> Vector2:
 	return point.snapped(Vector2(10, 10)) if grid_enabled else point
 
@@ -355,7 +403,8 @@ func _draw() -> void:
 			draw_line(Vector2(x, 100), Vector2(x, 620), Color(0.2, 0.4, 0.35, 0.13 if x % 20 == 0 else 0.06), 1.0)
 		for y in range(100, 621, 10):
 			draw_line(Vector2(400, y), Vector2(1240, y), Color(0.2, 0.4, 0.35, 0.13 if y % 20 == 0 else 0.06), 1.0)
-	draw_rect(BUILD_AREA, Color(0.2, 0.4, 0.35, 0.35), false, 2.0)
+	if show_guides:
+		draw_rect(BUILD_AREA, Color(0.2, 0.4, 0.35, 0.35), false, 2.0)
 	draw_line(Vector2(235, 609), Vector2(235, 510), Color("b98149"), 22.0, true)
 	draw_line(Vector2(235, 510), Vector2(207, 451), Color("b98149"), 17.0, true)
 	draw_line(Vector2(235, 510), Vector2(263, 451), Color("b98149"), 17.0, true)
@@ -374,6 +423,9 @@ func _draw() -> void:
 			draw_set_transform(world_to_local(draft.dog_positions[index]), 0, Vector2.ONE * zoom)
 			var dog := CharacterCatalog.find_dog(StringName(draft.dog_kinds[index]) if not draft.dog_kinds.is_empty() else &"scout")
 			HeroVisual.paint(self, &"dog", dog.id, dog.fur_color, dog.accent_color, 0, 0)
+		for point in draft.weight_positions:
+			draw_set_transform(world_to_local(point), 0, Vector2.ONE * zoom)
+			HangingWeightVisual.paint(self)
 		if selected_kind >= 0:
 			draw_set_transform(_origin(), 0, Vector2.ONE * zoom)
 			var selection := Rect2(selected_position() + _selection_offset() - selected_size() * 0.5, selected_size()).grow(7)

@@ -13,6 +13,7 @@ const CAT_SCENE := preload("res://scenes/actors/cat_projectile.tscn")
 const DOG_SCENE := preload("res://scenes/actors/dog_target.tscn")
 const BLOCK_SCENE := preload("res://scenes/actors/wooden_block.tscn")
 const HOUSE_SCENE := preload("res://scenes/actors/dog_house.tscn")
+const WEIGHT_SCENE := preload("res://scenes/actors/hanging_weight.tscn")
 const MUSIC_SCENE := preload("res://scenes/audio/background_music.tscn")
 const AimGestureVisual := preload("res://scripts/visuals/aim_gesture.gd")
 const MIN_FLIGHT_TIME := 1.2
@@ -73,6 +74,10 @@ func _ready() -> void:
 		block.size = level.block_sizes[index]
 		block.material_id = level.block_material_at(index)
 		actors.add_child(block)
+	for point in level.weight_positions:
+		var weight := WEIGHT_SCENE.instantiate() as HangingWeight
+		weight.position = point
+		actors.add_child(weight)
 	for index in level.dog_positions.size():
 		var house: DogHouse
 		var house_material := level.dog_house_material_at(index)

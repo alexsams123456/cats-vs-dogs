@@ -23,6 +23,7 @@ func _capture() -> void:
 	for dimensions: Vector2i in [Vector2i(1280, 720), Vector2i(1600, 720), Vector2i(960, 720)]:
 		root.size = dimensions
 		app.profile.results.clear()
+		app.profile.rewards.clear()
 		app.show_campaign()
 		await _layout()
 		_check(app.campaign != null and app.campaign.page == &"home", "Main menu opens before yard selection")
@@ -36,7 +37,13 @@ func _capture() -> void:
 		_check(app.campaign.page == &"campaign", "Main menu opens campaign map by pointer")
 		await _shot("map", dimensions)
 		for button in app.campaign.level_buttons:
-			_check(button.is_visible_in_tree() and root.get_visible_rect().encloses(button.get_global_rect()), "All six yard buttons fit screen")
+			var parent := button.get_parent()
+			while parent != null and not parent is ScrollContainer:
+				parent = parent.get_parent()
+			if parent is ScrollContainer:
+				parent.ensure_control_visible(button)
+				await _layout()
+			_check(button.is_visible_in_tree() and root.get_visible_rect().encloses(button.get_global_rect()), "Every campaign yard is reachable on the scrolling map")
 		_click(app.campaign.back_button, dimensions.x != 1280)
 		await _layout()
 		_check(app.campaign.continue_button.text.begins_with("Играть"), "First visit offers Play")
@@ -68,6 +75,7 @@ func _capture() -> void:
 			await _finish(app)
 			return
 		await _shot("first-victory", dimensions)
+		_check(app.profile.rewards.has("first_win") and game.hud._reward_notice.visible, "Real campaign victory grants and announces its first badge")
 		_click(game.hud._next_button, true)
 		await _layout()
 		_check(app.campaign_index == 1, "Next yard opens by touch after victory")

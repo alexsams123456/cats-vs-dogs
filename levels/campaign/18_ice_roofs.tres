@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Ледяные крыши"
+biome = "glacier"
+shots = 7
+dog_positions = PackedVector2Array(770, 595, 970, 595, 1150, 595)
+block_positions = PackedVector2Array(710.0, 570.0, 830.0, 570.0, 770, 510, 910.0, 540.0, 1030.0, 540.0, 970, 450, 1090.0, 560.0, 1210.0, 560.0, 1150, 490)
+block_sizes = PackedVector2Array(28, 100, 28, 100, 148, 20, 28, 160, 28, 160, 148, 20, 28, 120, 28, 120, 148, 20)
+block_materials = PackedStringArray("metal", "metal", "glass", "wood", "wood", "glass", "stone", "stone", "glass")
+cat_sequence = PackedStringArray("heavy", "magnet", "homing", "homing", "homing", "bomb", "homing")
+dog_kinds = PackedStringArray("scout", "scout", "scout")
+par_shots = 5

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Сквозной проход"
+biome = "backyard"
+shots = 4
+dog_positions = PackedVector2Array(810, 595, 1070, 595)
+block_positions = PackedVector2Array(720.0, 540.0, 900.0, 540.0, 810, 450, 980.0, 570.0, 1160.0, 570.0, 1070, 510)
+block_sizes = PackedVector2Array(28, 160, 28, 160, 208, 20, 28, 100, 28, 100, 208, 20)
+block_materials = PackedStringArray("wood", "wood", "wood", "wood", "wood", "glass")
+cat_sequence = PackedStringArray("ghost", "classic", "homing", "homing")
+dog_kinds = PackedStringArray("scout", "scout")
+par_shots = 1

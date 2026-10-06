@@ -5,6 +5,9 @@ extends Node
 const MENU_SCENE := preload("res://scenes/ui/roster_menu.tscn")
 const GAME_SCENE := preload("res://scenes/main.tscn")
 const EDITOR_SCENE := preload("res://scenes/editor/level_editor.tscn")
+const STARTUP_TRANSITION := preload("res://scenes/ui/startup_transition.tscn")
+
+@export var show_startup_intro: bool = false
 
 var selected_cat_id: StringName = &"classic"
 var selected_dog_id: StringName = &"scout"
@@ -20,6 +23,10 @@ var _world_audio: WorldAudio
 var _preview_level: LevelDefinition
 var _transition_pending: bool = false
 var _previous_quit_on_go_back: bool = true
+var _previous_inputs: Dictionary = {}
+var _previous_window_mode: DisplayServer.WindowMode
+var _changed_window_mode: bool = false
+var _applied_fullscreen: bool = false
 
 
 func _ready() -> void:
@@ -28,6 +35,10 @@ func _ready() -> void:
 	get_tree().root.go_back_requested.connect(_go_back)
 	profile = PlayerProfile.new(profile_path)
 	profile.load_data()
+	_previous_window_mode = DisplayServer.window_get_mode()
+	for action in DesktopPreferences.ACTIONS:
+		_previous_inputs[action] = InputMap.action_get_events(action) if InputMap.has_action(action) else null
+	_apply_desktop_preferences(not profile_path.is_empty())
 	GameLocalization.apply_locale(profile.locale)
 	get_window().title = tr("Кошки против собак")
 	selected_cat_id = profile.cat_id
@@ -37,9 +48,34 @@ func _ready() -> void:
 		SoundControls.set_volume(&"Music", profile.music_volume)
 		SoundControls.set_volume(&"SFX", profile.effects_volume)
 	_open_campaign()
+	if show_startup_intro:
+		_play_startup_intro()
+
+
+func _play_startup_intro() -> void:
+	_transition_pending = true
+	campaign.process_mode = Node.PROCESS_MODE_DISABLED
+	var layer := STARTUP_TRANSITION.instantiate() as CanvasLayer
+	add_child(layer)
+	var intro := layer.get_node("Splash") as StartupTransition
+	intro.finished.connect(func() -> void:
+		campaign.process_mode = Node.PROCESS_MODE_INHERIT
+		_transition_pending = false
+		layer.queue_free()
+	)
+	intro.begin(campaign)
 
 
 func _exit_tree() -> void:
+	for action: StringName in _previous_inputs:
+		if _previous_inputs[action] == null:
+			InputMap.erase_action(action)
+		else:
+			InputMap.action_erase_events(action)
+			for event: InputEvent in _previous_inputs[action]:
+				InputMap.action_add_event(action, event)
+	if _changed_window_mode:
+		DisplayServer.window_set_mode(_previous_window_mode)
 	get_tree().root.go_back_requested.disconnect(_go_back)
 	get_tree().quit_on_go_back = _previous_quit_on_go_back
 
@@ -185,6 +221,7 @@ func _open_game() -> void:
 	_world_audio = WorldAudio.new()
 	game.add_child(_world_audio)
 	_connect_sound_setting(game)
+	_apply_desktop_preferences()
 	_transition_pending = false
 
 
@@ -255,10 +292,22 @@ func _on_round_completed(won: bool, shots_used: int, stars: int) -> void:
 		return
 	if is_instance_valid(_world_audio):
 		_world_audio.play_victory()
+	var previous_rewards := profile.rewards.duplicate()
+	if is_instance_valid(game) and game.editor_preview and is_instance_valid(editor) and _preview_level != null:
+		editor.record_preview_win(_preview_level, shots_used, game.cat_definition.id, game.dog_definition.id)
+		if editor.draft.gameplay_fingerprint() == _preview_level.gameplay_fingerprint():
+			if profile.record_editor_win() != OK:
+				game.hud.set_save_warning()
 	if campaign_index >= 0:
 		profile.sound_muted = _sound_muted()
 		if profile.record_win(CampaignCatalog.IDS[campaign_index], shots_used, stars) != OK:
 			game.hud.set_save_warning()
+	var new_rewards := PackedStringArray()
+	for reward in profile.rewards:
+		if not previous_rewards.has(reward):
+			new_rewards.append(reward)
+	if not new_rewards.is_empty():
+		game.hud.show_rewards(new_rewards)
 
 
 func _on_selection_changed(cat_id: StringName, dog_id: StringName) -> void:
@@ -271,12 +320,45 @@ func _connect_sound_setting(screen: Node) -> void:
 	for node in screen.find_children("*", "", true, false):
 		if node is SoundControls:
 			node.settings_changed.connect(_save_profile)
+		elif node is DesktopOptions:
+			node.preferences = profile.desktop
+			node.settings_changed.connect(_on_desktop_settings_changed)
 		elif node is SoundToggle and not node.get_parent() is SoundControls:
 			node.pressed.connect(_save_profile)
 
 
 func _sound_muted() -> bool:
 	return SoundToggle.is_muted()
+
+
+func _on_desktop_settings_changed() -> void:
+	_apply_desktop_preferences(true)
+	_save_profile()
+	if profile.last_error != OK:
+		for node in find_children("*", "", true, false):
+			if node is DesktopOptions and node.dialog.visible:
+				node.status.text = tr("Не удалось сохранить настройки. Повтори изменение.")
+
+
+func _apply_desktop_preferences(apply_window: bool = false) -> void:
+	profile.desktop.apply_input()
+	if apply_window and profile.desktop.fullscreen != _applied_fullscreen and not OS.has_feature("web") and not OS.has_feature("mobile") and DisplayServer.get_name() != "headless":
+		_applied_fullscreen = profile.desktop.fullscreen
+		var windowed_mode := _previous_window_mode if _previous_window_mode != DisplayServer.WINDOW_MODE_FULLSCREEN and _previous_window_mode != DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN else DisplayServer.WINDOW_MODE_WINDOWED
+		var target := DisplayServer.WINDOW_MODE_FULLSCREEN if profile.desktop.fullscreen else windowed_mode
+		if DisplayServer.window_get_mode() != target:
+			_changed_window_mode = true
+			DisplayServer.window_set_mode(target)
+	if is_instance_valid(game):
+		game.camera.max_impact_pixels = 6.0 if profile.desktop.screen_shake else 0.0
+		if not profile.desktop.screen_shake:
+			game.camera.clear_impact()
+		var feedback := game.get_node("ImpactFeedback") as ImpactFeedback
+		feedback.reduced_particles = profile.desktop.reduced_particles
+		for burst in feedback.get_children():
+			if burst is ImpactBurst:
+				burst.fragment_count = 4 if profile.desktop.reduced_particles else 12
+		game.hud.refresh_desktop_help()
 
 
 func _save_profile() -> void:

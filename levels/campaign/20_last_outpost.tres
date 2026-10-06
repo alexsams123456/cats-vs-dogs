@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Последний рубеж"
+biome = "backyard"
+shots = 7
+dog_positions = PackedVector2Array(760, 595, 990, 435, 1160, 595)
+block_positions = PackedVector2Array(690.0, 565.0, 830.0, 565.0, 760, 500, 905.0, 550.0, 1075.0, 550.0, 990, 470, 1110.0, 570.0, 1210.0, 570.0, 1160, 510)
+block_sizes = PackedVector2Array(28, 110, 28, 110, 168, 20, 28, 140, 28, 140, 198, 20, 28, 100, 28, 100, 128, 20)
+block_materials = PackedStringArray("wood", "wood", "glass", "wood", "wood", "wood", "glass", "glass", "metal")
+cat_sequence = PackedStringArray("splitter", "bomb", "heavy", "homing", "homing", "homing", "classic")
+dog_kinds = PackedStringArray("armored", "scout", "jumper")
+par_shots = 5

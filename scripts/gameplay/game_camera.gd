@@ -6,9 +6,11 @@ signal aim_cancel_requested
 
 @export_range(0.5, 1.0, 0.05) var min_zoom: float = 0.75
 @export_range(1.0, 3.0, 0.1) var max_zoom: float = 2.0
+@export_range(0.0, 12.0, 0.5) var max_impact_pixels: float = 6.0
 
 const MIN_PINCH_DISTANCE: float = 16.0
 const WHEEL_STEP: float = 1.15
+const IMPACT_DURATION: float = 0.18
 
 var _touches: Dictionary[int, Vector2] = {}
 var _pair: Array[int] = []
@@ -16,7 +18,9 @@ var _gesture_active: bool = false
 var _last_center: Vector2
 var _last_distance: float = 0.0
 var _home_position: Vector2
-
+var _impact_elapsed: float = IMPACT_DURATION
+var _impact_amplitude: float = 0.0
+var _impact_direction := Vector2.RIGHT
 
 func _ready() -> void:
 	_home_position = position
@@ -33,9 +37,34 @@ func cancel_gesture() -> void:
 
 func reset_view() -> void:
 	cancel_gesture()
+	clear_impact()
 	zoom = Vector2.ONE
 	position = _home_position
 	force_update_scroll()
+
+
+func punch(intensity: float, direction: Vector2) -> void:
+	if not can_process():
+		return
+	_impact_elapsed = 0.0
+	_impact_amplitude = max_impact_pixels * lerpf(0.4, 1.0, clampf(intensity, 0.0, 1.0))
+	_impact_direction = direction.normalized() if direction.length_squared() > 0.01 else Vector2(0.8, -0.6)
+	offset = _impact_direction * _impact_amplitude / zoom.x
+
+
+func clear_impact() -> void:
+	_impact_elapsed = IMPACT_DURATION
+	_impact_amplitude = 0.0
+	offset = Vector2.ZERO
+
+
+func _process(delta: float) -> void:
+	if _impact_elapsed >= IMPACT_DURATION:
+		return
+	_impact_elapsed = minf(IMPACT_DURATION, _impact_elapsed + delta)
+	var fade := pow(1.0 - _impact_elapsed / IMPACT_DURATION, 2.0)
+	var wave := _impact_direction * cos(_impact_elapsed * 80.0) + _impact_direction.orthogonal() * sin(_impact_elapsed * 113.0) * 0.35
+	offset = wave.limit_length(1.0) * _impact_amplitude * fade / zoom.x
 
 
 func _input(event: InputEvent) -> void:
@@ -120,7 +149,7 @@ func _update_pinch() -> void:
 func _transform_view(previous_center: Vector2, center: Vector2, factor: float) -> void:
 	var world_anchor := get_canvas_transform().affine_inverse() * previous_center
 	zoom = Vector2.ONE * clampf(zoom.x * factor, min_zoom, max_zoom)
-	position = world_anchor - (center - get_viewport_rect().size * 0.5) / zoom.x
+	position = world_anchor - (center - get_viewport_rect().size * 0.5) / zoom.x - offset
 	_clamp_position()
 	force_update_scroll()
 

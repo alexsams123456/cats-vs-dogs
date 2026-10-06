@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Двор с грузами"
+shots = 4
+dog_positions = PackedVector2Array(800, 595, 1100, 595)
+dog_kinds = PackedStringArray("scout", "scout")
+weight_positions = PackedVector2Array(800, 330, 1100, 330)
+block_positions = PackedVector2Array(730, 550, 870, 550, 800, 469, 1030, 550, 1170, 550, 1100, 469)
+block_sizes = PackedVector2Array(30, 140, 30, 140, 180, 20, 30, 140, 30, 140, 180, 20)
+block_materials = PackedStringArray("wood", "wood", "glass", "wood", "wood", "glass")

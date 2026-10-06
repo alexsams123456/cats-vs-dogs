@@ -17,7 +17,7 @@ func _run() -> void:
 	var bus_index := AudioServer.get_bus_index(&"SFX")
 	AudioServer.set_bus_mute(bus_index, false)
 	for sound: AudioStreamWAV in [WorldAudio.TENSION, WorldAudio.RELEASE, WorldAudio.FLIGHT,
-			WorldAudio.WOOD, WorldAudio.GLASS, WorldAudio.STONE, WorldAudio.METAL, WorldAudio.VICTORY]:
+			WorldAudio.WOOD, WorldAudio.GLASS, WorldAudio.STONE, WorldAudio.METAL, WorldAudio.VICTORY, WorldAudio.IMPACT]:
 		_check(sound.get_length() >= 0.1 and sound.get_length() <= 1.3, "Every effect has a short bounded duration")
 		_check(not sound.data.is_empty() and sound.loop_mode == AudioStreamWAV.LOOP_DISABLED, "Effects contain samples and never loop")
 	await _test_sling()

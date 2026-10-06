@@ -2,7 +2,7 @@
 param(
     [string]$GodotPath,
     [ValidateRange(1, 600)]
-    [int]$TimeoutSeconds = 120
+    [int]$TimeoutSeconds = 300
 )
 
 $ErrorActionPreference = 'Stop'
@@ -134,10 +134,20 @@ try {
     $LevelLibraryArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'level-library.log'), '--script', 'res://tests/level_library_test.gd')
     $LevelLibraryOutput = Invoke-GodotCheck -Name 'level-library' -Arguments $LevelLibraryArguments
     Write-Host $LevelLibraryOutput
+    Write-Host 'Running level exchange checks...'
+    $ExchangeArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'level-exchange.log'), '--script', 'res://tests/level_exchange_test.gd')
+    $ExchangeOutput = Invoke-GodotCheck -Name 'level-exchange' -Arguments $ExchangeArguments
+    Write-Host $ExchangeOutput
+    Write-Host 'Running level presentation checks...'
+    $PresentationArguments = @('--headless', '--fixed-fps', '60', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'level-presentation.log'), '--script', 'res://tests/level_presentation_test.gd')
+    Write-Host (Invoke-GodotCheck -Name 'level-presentation' -Arguments $PresentationArguments)
     Write-Host 'Running level editor checks...'
     $EditorArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'editor.log'), '--script', 'res://tests/editor_test.gd')
     $EditorOutput = Invoke-GodotCheck -Name 'editor' -Arguments $EditorArguments
     Write-Host $EditorOutput
+    Write-Host 'Running building templates and layout review checks...'
+    $BuildingsArguments = @('--headless', '--fixed-fps', '60', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'building-templates.log'), '--script', 'res://tests/building_templates_test.gd')
+    Write-Host (Invoke-GodotCheck -Name 'building-templates' -Arguments $BuildingsArguments)
     Write-Host 'Running material and building checks...'
     $MaterialsArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'materials.log'), '--script', 'res://tests/materials_test.gd')
     $MaterialsOutput = Invoke-GodotCheck -Name 'materials' -Arguments $MaterialsArguments
@@ -146,7 +156,7 @@ try {
     $KennelTypesArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'kennel-types.log'), '--script', 'res://tests/kennel_types_test.gd')
     $KennelTypesOutput = Invoke-GodotCheck -Name 'kennel-types' -Arguments $KennelTypesArguments
     Write-Host $KennelTypesOutput
-    foreach ($Suite in @('round_campaign', 'hud_help', 'result_feedback', 'aim_gesture', 'menu_reactions', 'touch_option_button', 'campaign', 'editor_recovery', 'biome', 'ambient_life', 'sun_observer', 'structural_load', 'world_audio', 'background_music', 'localization')) {
+    foreach ($Suite in @('desktop_options', 'rewards', 'startup', 'special_objects', 'impact_feedback', 'round_campaign', 'hud_help', 'result_feedback', 'aim_gesture', 'menu_reactions', 'touch_option_button', 'campaign', 'editor_recovery', 'biome', 'ambient_life', 'sun_observer', 'structural_load', 'world_audio', 'background_music', 'localization')) {
         Write-Host "Running $Suite checks..."
         $SuiteArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath "$Suite.log"), '--script', "res://tests/${Suite}_test.gd")
         Write-Host (Invoke-GodotCheck -Name $Suite -Arguments $SuiteArguments)

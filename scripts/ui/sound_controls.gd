@@ -53,6 +53,11 @@ func _ready() -> void:
 		settings_button.add_theme_color_override("font_" + state + "_color" if state != "normal" else "font_color", Color("254b4b"))
 	settings_button.pressed.connect(open_settings)
 	add_child(settings_button)
+	var desktop_options := DesktopOptions.new()
+	for state in ["normal", "hover", "pressed"]:
+		desktop_options.add_theme_stylebox_override(state, toggle.get_theme_stylebox(state))
+		desktop_options.add_theme_color_override("font_" + state + "_color" if state != "normal" else "font_color", Color("254b4b"))
+	add_child(desktop_options)
 	dialog = AcceptDialog.new()
 	var dialog_theme := Theme.new()
 	dialog_theme.default_font_size = 20

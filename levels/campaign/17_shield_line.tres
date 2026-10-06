@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Линия щитов"
+biome = "glacier"
+shots = 6
+dog_positions = PackedVector2Array(790, 595, 1050, 595)
+block_positions = PackedVector2Array(720.0, 575.0, 860.0, 575.0, 790, 520, 960.0, 540.0, 1140.0, 540.0, 1050, 450)
+block_sizes = PackedVector2Array(28, 90, 28, 90, 168, 20, 28, 160, 28, 160, 208, 20)
+block_materials = PackedStringArray("glass", "glass", "wood", "wood", "wood", "glass")
+cat_sequence = PackedStringArray("bomb", "classic", "homing", "homing", "homing", "heavy")
+dog_kinds = PackedStringArray("armored", "armored")
+par_shots = 4

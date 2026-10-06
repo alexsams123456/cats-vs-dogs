@@ -51,6 +51,11 @@ var _pending_replace: Callable
 var _library_dialog: AcceptDialog
 var _library_list: VBoxContainer
 var _rules_dialog: AcceptDialog
+var exchange_dialog: LevelExchangeDialog
+var building_palette: BuildingPalette
+var review_dialog: LevelReviewDialog
+var buildings_button: Button
+var review_button: Button
 var _cat_rows: VBoxContainer
 var _dog_properties: VBoxContainer
 var _margin: MarginContainer
@@ -96,6 +101,7 @@ func _ready() -> void:
 	canvas.edit_finished.connect(_finish_edit)
 	canvas.selection_changed.connect(_update_selection)
 	canvas.tool_changed.connect(_update_tools)
+	canvas.placement_rejected.connect(func(message: String) -> void: _status.text = tr(message))
 	_build_inspector(field_column)
 	var hint := _label("Выбери объект слева и нажми на поле. Перетаскивай мышью или пальцем.", 17)
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -203,6 +209,7 @@ func _build_header(column: VBoxContainer) -> void:
 	save_button = _button("Сохранить", save_level)
 	row.add_child(save_button)
 	row.add_child(_button("Копия", save_level.bind(true)))
+	row.add_child(_button("Обмен", _show_exchange))
 	play_button = _button("Испытать  →", request_play, ORANGE)
 	row.add_child(play_button)
 
@@ -252,6 +259,15 @@ func _build_sidebar(body: HBoxContainer) -> void:
 	scroll.add_child(column)
 	rules_button = _button("Правила двора", _show_rules, ORANGE)
 	column.add_child(rules_button)
+	buildings_button = _button("Готовые постройки", _show_buildings, ORANGE)
+	buildings_button.toggle_mode = true
+	buildings_button.clip_text = true
+	buildings_button.tooltip_text = "Готовые постройки"
+	column.add_child(buildings_button)
+	review_button = _button("Проверить двор", _show_review)
+	review_button.clip_text = true
+	review_button.tooltip_text = "Проверить двор"
+	column.add_child(review_button)
 	column.add_child(_label("МАТЕРИАЛ", 16))
 	material_picker = TouchOptionButton.new()
 	_style_picker(material_picker)
@@ -272,7 +288,7 @@ func _build_sidebar(body: HBoxContainer) -> void:
 	_house_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(_house_description)
 	column.add_child(_label("ОБЪЕКТЫ", 16))
-	var names: Array[String] = ["Выбрать / двигать", "+ Собака", "+ Стойка", "+ Перекладина", "+ Ящик", "+ Собака в будке", "+ Башня"]
+	var names: Array[String] = ["Выбрать / двигать", "+ Собака", "+ Стойка", "+ Перекладина", "+ Ящик", "+ Собака в будке", "+ Башня", "+ Подвешенный груз"]
 	for index in names.size():
 		var button := _button(names[index], _choose_tool.bind(index))
 		button.clip_text = true
@@ -366,6 +382,47 @@ func _build_dialogs() -> void:
 	_library_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_library_list)
 	_build_rules_dialog()
+	exchange_dialog = LevelExchangeDialog.new()
+	exchange_dialog.theme = dialog_theme
+	exchange_dialog.import_requested.connect(_confirm_import)
+	exchange_dialog.play_requested.connect(request_play)
+	add_child(exchange_dialog)
+	building_palette = BuildingPalette.new()
+	building_palette.theme = dialog_theme
+	building_palette.building_selected.connect(_choose_building)
+	add_child(building_palette)
+	review_dialog = LevelReviewDialog.new()
+	review_dialog.theme = dialog_theme
+	review_dialog.object_requested.connect(_select_review_object)
+	review_dialog.play_requested.connect(request_play)
+	add_child(review_dialog)
+
+
+func _show_buildings() -> void:
+	canvas.cancel_drag()
+	_finish_edit()
+	building_palette.show_palette()
+
+
+func _choose_building(index: int) -> void:
+	canvas.clear_selection()
+	canvas.building_index = index
+	canvas.set_tool(LevelCanvas.Tool.BUILDING)
+	_status.text = tr("%s · Нажми на свободное место поля. Постройку можно отменить целиком.") % tr(BuildingTemplates.LEVELS[index].title)
+
+
+func _show_review() -> void:
+	canvas.cancel_drag()
+	_finish_edit()
+	review_dialog.show_review(draft)
+
+
+func _select_review_object(kind: int, index: int) -> void:
+	canvas.set_tool(LevelCanvas.Tool.SELECT)
+	canvas.selected_kind = kind
+	canvas.selected_index = index
+	canvas.selection_changed.emit()
+	canvas.queue_redraw()
 
 
 func _build_rules_dialog() -> void:
@@ -536,23 +593,82 @@ func _show_library() -> void:
 	for child in _library_list.get_children():
 		_library_list.remove_child(child)
 		child.queue_free()
-	_library_list.add_child(_button("Первый двор · шаблон", _choose_saved.bind("res://levels/level_01.tres")))
-	_library_list.add_child(_button("Двор конур · шаблон", _choose_saved.bind("res://levels/kennel_yard.tres")))
+
 	var entries := LevelLibrary.list_levels()
 	for entry in entries:
-		var button := _button(entry.title, _choose_saved.bind(String(entry.path)))
-		button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		button.tooltip_text = entry.path
-		_library_list.add_child(button)
+		_library_list.add_child(_level_card(entry.level, entry.path, entry.title))
 	if entries.is_empty():
 		_library_list.add_child(_label("Здесь появятся сохранённые уровни.", 18))
+	for template: Dictionary in [{"title": "Первый двор · шаблон", "path": "res://levels/level_01.tres"}, {"title": "Двор конур · шаблон", "path": "res://levels/kennel_yard.tres"}, {"title": "Двор с грузами · шаблон", "path": "res://levels/weight_yard.tres"}]:
+		_library_list.add_child(_level_card(LevelLibrary.load_level(template.path), template.path, tr(template.title)))
 	_library_dialog.popup_centered()
+
+
+func _level_card(level: LevelDefinition, path: String, heading: String) -> Button:
+	var button := _button("", _choose_saved.bind(path))
+	button.name = "LevelCard"
+	button.custom_minimum_size.y = 132
+	button.tooltip_text = heading
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for side: String in ["left", "top", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 12)
+	button.add_child(margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	margin.add_child(row)
+	var thumbnail := LevelThumbnail.new()
+	thumbnail.draft = level
+	row.add_child(thumbnail)
+	var details := VBoxContainer.new()
+	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	details.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_child(details)
+	var title_label := _label(heading, 20)
+	title_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title_label.max_lines_visible = 2
+	title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	details.add_child(title_label)
+	var count_label := _label(tr("Собак: %d · выстрелов: %d") % [level.dog_positions.size(), level.shots], 16)
+	count_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	count_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	details.add_child(count_label)
+	var completion_label := _label(tr("Пройден автором") if level.is_author_completed() else tr("Нет отметки прохождения"), 16)
+	completion_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	completion_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	completion_label.modulate = ORANGE if level.is_author_completed() else CREAM
+	details.add_child(completion_label)
+	# Вся карточка нажимается, включая миниатюру и подписи.
+	for child: Node in button.find_children("*", "Control", true, false):
+		(child as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return button
 
 
 func _choose_saved(path: String) -> void:
 	_library_dialog.hide()
 	_confirm_replace(open_level.bind(path))
+
+
+func _show_exchange() -> void:
+	canvas.cancel_drag()
+	_finish_edit()
+	exchange_dialog.show_exchange(draft)
+
+
+func _confirm_import(level: LevelDefinition) -> void:
+	_confirm_replace(_import_level.bind(level))
+
+
+func _import_level(level: LevelDefinition) -> void:
+	var result := LevelLibrary.save_level(level)
+	if result.error != OK:
+		_status.text = tr("Не удалось сохранить уровень: ошибка %d. Черновик остаётся здесь.") % result.error
+		exchange_dialog.message.text = _status.text
+		exchange_dialog.popup_centered()
+		return
+	_replace_draft(level, result.path)
+	_status.text = tr("Уровень добавлен в «Мои уровни» · %s") % level.title
 
 
 func _confirm_replace(action: Callable) -> void:
@@ -605,6 +721,27 @@ func request_play() -> void:
 		play_requested.emit(draft.duplicate(true) as LevelDefinition)
 	else:
 		_status.text = tr("Добавь собаку и название, чтобы испытать уровень.")
+
+
+func record_preview_win(tested: LevelDefinition, shots_used: int, cat_id: StringName, dog_id: StringName) -> void:
+	if tested == null or draft.gameplay_fingerprint() != tested.gameplay_fingerprint():
+		return
+	if draft.is_author_completed() and int(draft.author_completion.shots) <= shots_used:
+		return
+	var saved_before := not is_dirty() and not current_path.is_empty()
+	draft.record_author_completion(shots_used, cat_id, dog_id)
+	if not draft.is_author_completed():
+		return
+	var error: Error = OK
+	if saved_before:
+		var result := LevelLibrary.save_level(draft, current_path)
+		error = result.error
+		if error == OK:
+			_saved_state = _signature(draft)
+	_refresh()
+	flush_recovery()
+	if error != OK:
+		_status.text = tr("Не удалось сохранить уровень: ошибка %d. Черновик остаётся здесь.") % error
 
 
 func is_dirty() -> bool:
@@ -680,7 +817,7 @@ func _restore_history() -> void:
 
 
 func _signature(value: LevelDefinition) -> String:
-	return var_to_str([value.title, value.biome, value.shots, value.dog_positions, value.dog_house_materials, value.dog_house_types, value.block_positions, value.block_sizes, value.block_materials, value.cat_sequence, value.dog_kinds, value.tutorial, value.par_shots])
+	return var_to_str([value.title, value.biome, value.shots, value.dog_positions, value.dog_house_materials, value.dog_house_types, value.block_positions, value.block_sizes, value.block_materials, value.weight_positions, value.cat_sequence, value.dog_kinds, value.tutorial, value.par_shots, value.author_completion])
 
 
 func _on_title_changed(value: String) -> void:
@@ -746,6 +883,7 @@ func _update_house_description() -> void:
 
 
 func _update_tools() -> void:
+	buildings_button.set_pressed_no_signal(canvas.tool == LevelCanvas.Tool.BUILDING)
 	for index in tool_buttons.size():
 		tool_buttons[index].set_pressed_no_signal(index == canvas.tool)
 
@@ -762,6 +900,9 @@ func _refresh() -> void:
 
 
 func _update_actions() -> void:
+	if not draft.author_completion.is_empty() and not draft.is_author_completed():
+		draft.author_completion.clear()
+		_queue_recovery()
 	play_button.disabled = not draft.is_valid()
 	save_button.disabled = not draft.is_valid()
 	undo_button.disabled = _undo_stack.is_empty() and _before == null
@@ -777,6 +918,8 @@ func _update_actions() -> void:
 		if not draft.dog_house_material_at(index).is_empty():
 			house_count += 1
 	_status.text = tr("%s · собак: %d · будок: %d · блоков: %d%s") % [state, draft.dog_positions.size(), house_count, draft.block_positions.size(), hint]
+	if draft.is_author_completed():
+		_status.text += " · " + tr("Пройден автором")
 	if _recovered:
 		_status.text = tr("Черновик восстановлен · ") + _status.text
 	if _recovery_failed:
@@ -797,6 +940,8 @@ func _update_selection() -> void:
 			dog_kind_picker.tooltip_text = tr("Без своего состава используются герои песочницы.")
 		dog_kind_picker.select(kind_index)
 	_selection_label.text = (tr("Собака") if canvas.selected_kind == 0 else tr("Блок")) if selected else tr("Ничего не выбрано")
+	if canvas.selected_kind == 2:
+		_selection_label.text = tr("Подвешенный груз") + "\n" + tr("Попади в верёвку — груз упадёт и разрушит постройку.")
 	var selected_material := canvas.selected_material()
 	if not selected_material.is_empty():
 		var material_index := BlockMaterials.IDS.find(selected_material)
@@ -823,7 +968,7 @@ func _update_selection() -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo:
 		return
-	if get_viewport().gui_get_focus_owner() is LineEdit:
+	if exchange_dialog.visible or building_palette.visible or review_dialog.visible or _confirm.visible or _library_dialog.visible or _rules_dialog.visible or get_viewport().gui_get_focus_owner() is LineEdit or get_viewport().gui_get_focus_owner() is TextEdit:
 		return
 	if event.ctrl_pressed and event.keycode == KEY_Z:
 		if event.shift_pressed:
@@ -836,6 +981,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		save_level()
 	elif event.keycode == KEY_DELETE:
 		canvas.delete_selected()
+	elif event.keycode == KEY_ESCAPE and canvas.tool == LevelCanvas.Tool.BUILDING:
+		canvas.set_tool(LevelCanvas.Tool.SELECT)
+		_update_actions()
 	else:
 		return
 	get_viewport().set_input_as_handled()

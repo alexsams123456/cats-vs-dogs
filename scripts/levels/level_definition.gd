@@ -10,6 +10,7 @@ const BIOMES: Array[StringName] = [&"backyard", &"mountain", &"glacier"]
 @export_range(1, 20) var shots: int = 4
 @export var dog_positions: PackedVector2Array = PackedVector2Array()
 @export var block_positions: PackedVector2Array = PackedVector2Array()
+@export var weight_positions: PackedVector2Array = PackedVector2Array()
 @export var block_sizes: PackedVector2Array = PackedVector2Array()
 @export var block_materials: PackedStringArray = PackedStringArray()
 ## Empty entries mark dogs without a shelter; an empty array supports older levels.
@@ -22,6 +23,31 @@ const BIOMES: Array[StringName] = [&"backyard", &"mountain", &"glacier"]
 @export var tutorial: StringName = &""
 ## Zero disables scoring for older levels; otherwise this is the three-star limit.
 @export_range(0, 20) var par_shots: int = 0
+## Победа в пробе относится только к точной раскладке и правилам.
+@export var author_completion: Dictionary = {}
+
+
+func gameplay_fingerprint() -> String:
+	var normalized := duplicate(true) as LevelDefinition
+	normalized.normalize_materials()
+	return JSON.stringify(LevelData.to_dictionary(normalized, false), "", true, true).sha256_text()
+
+
+func is_author_completed() -> bool:
+	if not is_valid() or author_completion.size() != 4:
+		return false
+	if not author_completion.get("fingerprint") is String or not LevelData._is_integer(author_completion.get("shots")):
+		return false
+	if not author_completion.get("cat") is String or not author_completion.get("dog") is String:
+		return false
+	var used := int(author_completion.shots)
+	return used >= 0 and used <= shots and author_completion.fingerprint == gameplay_fingerprint() and CharacterCatalog.find_cat(StringName(author_completion.cat)).id == StringName(author_completion.cat) and CharacterCatalog.find_dog(StringName(author_completion.dog)).id == StringName(author_completion.dog)
+
+
+func record_author_completion(shots_used: int, cat_id: StringName, dog_id: StringName) -> void:
+	author_completion = {"fingerprint": gameplay_fingerprint(), "shots": shots_used, "cat": String(cat_id), "dog": String(dog_id)}
+	if not is_author_completed():
+		author_completion.clear()
 
 
 func is_valid() -> bool:
@@ -47,6 +73,11 @@ func is_valid() -> bool:
 		return false
 	if block_positions.size() != block_sizes.size() or block_positions.size() > MAX_OBJECTS:
 		return false
+	if weight_positions.size() > MAX_OBJECTS:
+		return false
+	for position in weight_positions:
+		if not position.is_finite():
+			return false
 	if not block_materials.is_empty() and block_materials.size() != block_positions.size():
 		return false
 	if not dog_house_materials.is_empty() and dog_house_materials.size() != dog_positions.size():

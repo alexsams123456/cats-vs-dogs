@@ -343,7 +343,9 @@ func _test_homing() -> void:
 	cat.collision_layer = 0
 	cat.collision_mask = 0
 	cat.activate_ability()
-	await create_timer(0.2).timeout
+	# Измеряем поворот после 12 физических шагов, а не таймера отрисовки.
+	for tick in 12:
+		await physics_frame
 	var target_direction := (target.position - cat.position).normalized()
 	_check(absf(cat.linear_velocity.angle_to(target_direction)) < 0.35 and cat.linear_velocity.length() > velocity.length() * 0.98, "Homing sharply redirects a fast shot toward the nearest dog without sacrificing speed")
 	target.queue_free()

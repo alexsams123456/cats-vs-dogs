@@ -12,6 +12,7 @@ const GLASS := preload("res://assets/audio/sfx_glass.wav")
 const STONE := preload("res://assets/audio/sfx_stone.wav")
 const METAL := preload("res://assets/audio/sfx_metal.wav")
 const VICTORY := preload("res://assets/audio/sfx_victory.wav")
+const IMPACT := preload("res://assets/audio/sfx_impact.wav")
 const MAX_VOICES := 6
 const MATERIAL_INTERVAL := 0.08
 
@@ -53,7 +54,7 @@ func play_victory() -> void:
 
 
 func _on_node_added(node: Node) -> void:
-	if node is Slingshot or node is WoodenBlock:
+	if node is Slingshot or node is WoodenBlock or node is HangingWeight or node is ImpactFeedback:
 		_bind_node.call_deferred(node)
 
 
@@ -74,10 +75,24 @@ func _bind_node(node: Node) -> void:
 		if not node.tension_started.is_connected(_on_tension):
 			node.tension_started.connect(_on_tension)
 			node.launched.connect(_on_launched)
+	elif node is HangingWeight:
+		if not node.material_hit.is_connected(_on_material_hit):
+			node.material_hit.connect(_on_material_hit)
+			node.released.connect(_on_material_destroyed.bind(&"wood"))
 	elif node is WoodenBlock:
 		if not node.material_hit.is_connected(_on_material_hit):
 			node.material_hit.connect(_on_material_hit)
 			node.destroyed.connect(_on_material_destroyed.bind(node.material_id))
+	elif node is ImpactFeedback:
+		if not node.impact_presented.is_connected(_on_strong_impact):
+			node.impact_presented.connect(_on_strong_impact)
+
+
+func _on_strong_impact(_point: Vector2, intensity: float, _material_id: StringName) -> void:
+	if _victory_played or _cooldowns.get(&"impact", 0.0) > 0.0 or not _can_play():
+		return
+	_cooldowns[&"impact"] = 0.09
+	_play(&"impact", IMPACT, lerpf(-17.0, -12.0, intensity), true)
 
 
 func _on_tension() -> void:

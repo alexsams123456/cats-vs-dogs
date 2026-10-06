@@ -27,7 +27,7 @@ func _test_profile() -> void:
 	profile.load_data()
 	_check(profile.results.is_empty() and profile.cat_id == &"classic", "Missing profile has defaults")
 	_check(CampaignCatalog.is_unlocked(0, profile) and not CampaignCatalog.is_unlocked(1, profile), "Only first yard starts unlocked")
-	_check(not CampaignCatalog.is_unlocked(-1, profile) and not CampaignCatalog.is_unlocked(6, profile), "Invalid campaign indices cannot start")
+	_check(not CampaignCatalog.is_unlocked(-1, profile) and not CampaignCatalog.is_unlocked(CampaignCatalog.LEVELS.size(), profile), "Invalid campaign indices cannot start")
 	profile.cat_id = &"frost"
 	profile.dog_id = &"jumper"
 	profile.sound_muted = true
@@ -61,6 +61,13 @@ func _test_profile() -> void:
 	restored.load_data()
 	_check(restored.music_volume == 1.0 and restored.effects_volume == 0.0, "Malformed volume uses a default and numeric volume stays in range")
 	DirAccess.remove_absolute(_save_path)
+	_check(CampaignCatalog.IDS.slice(0, 9) == ["first_throw", "air_trick", "little_shelter", "glass_bridge", "restless_yard", "last_fort", "falling_gallery", "double_drop", "weight_cascade"], "Existing nine saved level IDs retain their order")
+	var legacy := PlayerProfile.new("")
+	for index in 9:
+		legacy.record_win(CampaignCatalog.IDS[index], CampaignCatalog.LEVELS[index].par_shots, 3)
+	_check(CampaignCatalog.total_stars(legacy) == 27 and CampaignCatalog.is_unlocked(9, legacy) and not CampaignCatalog.is_unlocked(10, legacy), "Old campaign completion keeps 27 stars and opens only level ten")
+	_check(not legacy.rewards.has("campaign_complete") and not legacy.rewards.has("perfect_campaign"), "New completion badges require all twenty results")
+	_check(CampaignCatalog.CHAPTER_STARTS.back() == CampaignCatalog.LEVELS.size() and CampaignCatalog.NOTES.size() == CampaignCatalog.LEVELS.size(), "Chapter ranges and hints cover the whole campaign")
 	for index in CampaignCatalog.LEVELS.size():
 		var level := CampaignCatalog.LEVELS[index]
 		_check(StringName(level.biome) == CampaignCatalog.CHAPTER_BIOMES[CampaignCatalog.chapter_for_level(index)], "Campaign chapter matches the environment of level %d" % (index + 1))
@@ -78,13 +85,14 @@ func _test_app() -> void:
 	await _settle()
 	_check(app.campaign != null and app.menu == null and app.game == null, "Application starts at main menu")
 	_check(not quit_on_go_back, "Main menu intercepts native Back before automatic quit")
-	_check(app.campaign.level_buttons.size() == 6, "Campaign starts with six prepared yards")
-	_check(app.campaign.chapter_panels.size() == 3, "Campaign groups all six levels into three chapters")
+	_check(app.campaign.level_buttons.size() == 20, "Campaign includes twenty authored yards")
+	_check(app.campaign.chapter_panels.size() == 8, "Campaign has eight complete chapters")
 	for chapter in app.campaign.chapter_panels.size():
 		var buttons := app.campaign.chapter_panels[chapter].find_children("*", "Button", true, false)
-		_check(buttons.size() == 2, "Each chapter contains two playable level cards")
+		var start := CampaignCatalog.CHAPTER_STARTS[chapter]
+		_check(buttons.size() == CampaignCatalog.CHAPTER_STARTS[chapter + 1] - start, "Chapter contains its complete level range")
 		for offset in buttons.size():
-			_check(buttons[offset] == app.campaign.level_buttons[chapter * 2 + offset], "Chapter order preserves progression and saved level IDs")
+			_check(buttons[offset] == app.campaign.level_buttons[start + offset], "Chapter order preserves progression and saved level IDs")
 	_check(app.campaign.continue_index == 0 and app.campaign.continue_button.text.begins_with("Играть"), "New profile starts at first yard with Play")
 	await _test_menu_navigation(app.campaign)
 	await _test_sound_controls(app)
@@ -179,14 +187,25 @@ func _test_app() -> void:
 	_check(app.campaign_index == 1 and app.game.slingshot.loaded_projectile.definition.id == &"splitter", "Continue after relaunch starts next fixed loadout")
 	app.game.return_to_menu()
 	await _settle()
+	for index in 6:
+		app.profile.record_win(CampaignCatalog.IDS[index], CampaignCatalog.LEVELS[index].par_shots, 3)
+	app.show_campaign()
+	await _settle()
+	_check(CampaignCatalog.total_stars(app.profile) == 18 and app.campaign.continue_index == 6, "Completed legacy campaign continues into chain reactions with old records intact")
+	_check(CampaignCatalog.is_unlocked(6, app.profile) and not CampaignCatalog.is_unlocked(7, app.profile), "Legacy completion unlocks exactly the first new yard")
+	app.start_campaign_level(5)
+	await _settle()
+	_check(app.game.has_next_level, "Former final yard now offers the chain reaction chapter")
+	app.game.return_to_menu()
+	await _settle()
 	for index in CampaignCatalog.LEVELS.size():
 		app.profile.record_win(CampaignCatalog.IDS[index], CampaignCatalog.LEVELS[index].par_shots, 3)
-	app.start_campaign_level(5)
+	app.start_campaign_level(CampaignCatalog.LEVELS.size() - 1)
 	await _settle()
 	_check(not app.game.has_next_level, "Last yard has no nonexistent next level")
 	app.game.return_to_menu()
 	await _settle()
-	_check(CampaignCatalog.total_stars(app.profile) == 18, "Completed campaign totals eighteen stars")
+	_check(CampaignCatalog.total_stars(app.profile) == 60, "Completed campaign totals sixty stars")
 	_check(app.campaign.continue_button.text.begins_with("Переиграть") and app.campaign.continue_index == 0, "Complete campaign offers replay from first yard")
 	app.campaign.show_page(&"rating")
 	await _settle()
@@ -292,7 +311,7 @@ func _test_menu_navigation(menu: CampaignMenu) -> void:
 func _check_rating(menu: CampaignMenu) -> void:
 	_check(menu.rating_rows.size() == CampaignCatalog.LEVELS.size(), "Local rating contains one row per prepared yard")
 	var summary := menu.rating_summary.text.replace(" ", "")
-	_check("%d/18" % CampaignCatalog.total_stars(menu.profile) in summary, "Rating summary uses actual profile stars")
+	_check("%d/%d" % [CampaignCatalog.total_stars(menu.profile), CampaignCatalog.LEVELS.size() * 3] in summary, "Rating summary uses actual profile stars")
 	for index in mini(menu.rating_rows.size(), CampaignCatalog.LEVELS.size()):
 		var value := menu.rating_rows[index].text
 		var stars := menu.profile.stars_for(CampaignCatalog.IDS[index])

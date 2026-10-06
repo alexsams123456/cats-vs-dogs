@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Ловушка с грузом"
+dog_positions = PackedVector2Array(820, 595)
+dog_kinds = PackedStringArray("scout")
+weight_positions = PackedVector2Array(820, 330)
+block_positions = PackedVector2Array(750, 550, 890, 550, 820, 470)
+block_sizes = PackedVector2Array(30, 140, 30, 140, 180, 20)
+block_materials = PackedStringArray("wood", "wood", "glass")

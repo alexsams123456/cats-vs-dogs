@@ -193,7 +193,7 @@ func _test_final_shot_settles() -> void:
 	definition.dog_kinds = PackedStringArray(["scout"])
 	var game := _round(definition)
 	await create_timer(0.9).timeout
-	game.slingshot.launch_from_pull(Vector2(-95, 42))
+	game.slingshot.launch_from_pull(Vector2(-82, 36))
 	# Advance only the round timer to its boundary; the projectile still follows
 	# a real trajectory and must be allowed to make its physical impact.
 	game._flight_time = GameRound.MAX_FLIGHT_TIME - 0.1

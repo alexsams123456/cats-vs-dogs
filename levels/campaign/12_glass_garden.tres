@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Стеклянный сад"
+biome = "backyard"
+shots = 6
+dog_positions = PackedVector2Array(760, 595, 930, 595, 1110, 595)
+block_positions = PackedVector2Array(700.0, 545.0, 820.0, 545.0, 760, 460, 870.0, 565.0, 990.0, 565.0, 930, 500, 1050.0, 530.0, 1170.0, 530.0, 1110, 430)
+block_sizes = PackedVector2Array(28, 150, 28, 150, 148, 20, 28, 110, 28, 110, 148, 20, 28, 180, 28, 180, 148, 20)
+block_materials = PackedStringArray("glass", "glass", "wood", "glass", "glass", "glass", "wood", "wood", "glass")
+cat_sequence = PackedStringArray("splitter", "bomb", "homing", "homing", "homing", "classic")
+dog_kinds = PackedStringArray("scout", "scout", "scout")
+par_shots = 4

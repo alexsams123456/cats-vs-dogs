@@ -24,6 +24,8 @@ func _run() -> void:
 		root.size = dimensions
 		await _settle()
 		await _test_size(dimensions)
+		# Завершить отложенное закрытие подсказок до следующего resize окна.
+		await _settle()
 	await _test_gestures()
 	await _test_navigation()
 	await _test_lifetime()

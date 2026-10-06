@@ -12,6 +12,8 @@ var music_volume: float = 1.0
 var effects_volume: float = 1.0
 var locale: String = "ru"
 var results: Dictionary = {}
+var rewards: PackedStringArray = PackedStringArray()
+var desktop: DesktopPreferences = DesktopPreferences.new()
 var last_error: Error = OK
 
 
@@ -27,6 +29,8 @@ func load_data() -> void:
 	effects_volume = 1.0
 	locale = "ru"
 	results.clear()
+	rewards.clear()
+	desktop = DesktopPreferences.new()
 	if path.is_empty():
 		return
 	var data := _read(path)
@@ -43,6 +47,12 @@ func load_data() -> void:
 	effects_volume = _volume_from(data.get("effects_volume", 1.0))
 	var saved_locale: Variant = data.get("locale", "ru")
 	locale = GameLocalization.normalize_locale(saved_locale) if saved_locale is String else "ru"
+	desktop.load_data(data.get("desktop", {}))
+	var saved_rewards: Variant = data.get("rewards", [])
+	if saved_rewards is Array:
+		for reward: Variant in saved_rewards:
+			if reward is String and reward in RewardCatalog.IDS and not rewards.has(reward):
+				rewards.append(reward)
 	var records: Variant = data.get("results", {})
 	if not records is Dictionary:
 		return
@@ -60,6 +70,7 @@ func load_data() -> void:
 			continue
 		if stars >= 1 and stars <= 3 and shots >= 0 and shots <= 20:
 			results[level_id] = {"stars": int(stars), "shots": int(shots)}
+	RewardCatalog.synchronize(self)
 
 
 func stars_for(level_id: String) -> int:
@@ -78,6 +89,13 @@ func record_win(level_id: String, shots: int, stars: int) -> Error:
 		"stars": maxi(stars, stars_for(level_id)),
 		"shots": shots if previous < 0 else mini(shots, previous),
 	}
+	RewardCatalog.synchronize(self)
+	return save_data()
+
+
+func record_editor_win() -> Error:
+	if not rewards.has("yard_author"):
+		rewards.append("yard_author")
 	return save_data()
 
 
@@ -85,7 +103,7 @@ func save_data() -> Error:
 	last_error = OK
 	if path.is_empty():
 		return OK
-	var data := {"version": 1, "cat": String(cat_id), "dog": String(dog_id), "muted": sound_muted, "music_volume": _volume_from(music_volume), "effects_volume": _volume_from(effects_volume), "locale": locale, "results": results}
+	var data := {"version": 1, "cat": String(cat_id), "dog": String(dog_id), "muted": sound_muted, "music_volume": _volume_from(music_volume), "effects_volume": _volume_from(effects_volume), "locale": locale, "results": results, "rewards": rewards, "desktop": desktop.to_data()}
 	var temporary := path + ".tmp"
 	var file := FileAccess.open(temporary, FileAccess.WRITE)
 	if file == null:

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Три укрытия"
+biome = "backyard"
+shots = 6
+dog_positions = PackedVector2Array(760, 595, 970, 595, 1150, 595)
+block_positions = PackedVector2Array(880.0, 535.0, 1060.0, 535.0, 970, 440)
+block_sizes = PackedVector2Array(28, 170, 28, 170, 208, 20)
+block_materials = PackedStringArray("wood", "wood", "glass")
+cat_sequence = PackedStringArray("bomb", "ghost", "homing", "homing", "homing", "classic")
+dog_kinds = PackedStringArray("scout", "scout", "scout")
+par_shots = 4
+dog_house_materials = PackedStringArray("glass", "", "glass")
+dog_house_types = PackedStringArray("barrel", "", "igloo")

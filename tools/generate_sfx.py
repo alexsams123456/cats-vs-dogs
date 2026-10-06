@@ -95,8 +95,27 @@ def victory():
     save("victory", samples)
 
 
+def impact():
+    rng = Random(524)
+    duration = 0.22
+    samples = []
+    phase = 0.0
+    low_noise = 0.0
+    for index in range(int(RATE * duration)):
+        time = index / RATE
+        phase += 2.0 * pi * (62.0 + 110.0 * exp(-time * 35.0)) / RATE
+        low_noise = 0.78 * low_noise + 0.22 * rng.uniform(-1.0, 1.0)
+        envelope = min(1.0, time * 1400.0) * exp(-time * 25.0) * (1.0 - time / duration)
+        sound = sin(phase) * 0.85 + sin(phase * 2.3) * exp(-time * 60.0) * 0.2
+        samples.append((sound + low_noise * exp(-time * 65.0) * 0.8) * envelope)
+    save("impact", samples)
+
+
 if __name__ == "__main__":
     OUTPUT.mkdir(parents=True, exist_ok=True)
+    if "--impact-only" in sys.argv:
+        impact()
+        sys.exit(0)
     mechanical("tension", 0.19, 510)
     mechanical("release", 0.16, 511)
     mechanical("flight", 0.34, 512)
@@ -105,3 +124,4 @@ if __name__ == "__main__":
     material("stone", 0.33, [(84, 0.9, 20), (183, 0.35, 28), (630, 0.15, 58)], 522)
     material("metal", 0.65, [(390, 0.6, 9), (877, 0.4, 11), (1403, 0.22, 16)], 523)
     victory()
+    impact()

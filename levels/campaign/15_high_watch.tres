@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Высокий дозор"
+biome = "mountain"
+shots = 5
+dog_positions = PackedVector2Array(760, 595, 990, 335, 1130, 595)
+block_positions = PackedVector2Array(700.0, 570.0, 820.0, 570.0, 760, 510, 910.0, 560.0, 1070.0, 560.0, 990, 490, 915.0, 430.0, 1065.0, 430.0, 990, 370)
+block_sizes = PackedVector2Array(28, 100, 28, 100, 148, 20, 28, 120, 28, 120, 188, 20, 28, 100, 28, 100, 178, 20)
+block_materials = PackedStringArray("wood", "wood", "glass", "stone", "stone", "wood", "wood", "wood", "glass")
+cat_sequence = PackedStringArray("heavy", "splitter", "homing", "homing", "homing")
+dog_kinds = PackedStringArray("scout", "scout", "scout")
+par_shots = 3

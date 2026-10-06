@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Каменные ворота"
+biome = "mountain"
+shots = 7
+dog_positions = PackedVector2Array(810, 595, 1110, 595)
+block_positions = PackedVector2Array(710.0, 530.0, 910.0, 530.0, 810, 430, 1040.0, 575.0, 1180.0, 575.0, 1110, 520)
+block_sizes = PackedVector2Array(28, 180, 28, 180, 228, 20, 28, 90, 28, 90, 168, 20)
+block_materials = PackedStringArray("stone", "stone", "glass", "wood", "wood", "stone")
+cat_sequence = PackedStringArray("heavy", "bomb", "homing", "homing", "classic", "classic", "homing")
+dog_kinds = PackedStringArray("scout", "scout")
+par_shots = 5

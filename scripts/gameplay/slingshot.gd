@@ -6,7 +6,7 @@ signal launched(projectile: CatProjectile)
 signal tension_started
 
 @export var max_pull: float = 105.0
-@export var launch_speed: float = 8.5
+@export var launch_speed: float = 10.0
 
 const GRAB_RADIUS: float = 54.0
 const MIN_PULL: float = 10.0

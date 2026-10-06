@@ -13,6 +13,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	await _check_full_field_throw()
 	var game = MAIN_SCENE.instantiate()
 	root.add_child(game)
 	current_scene = game
@@ -93,6 +94,28 @@ func _run() -> void:
 	# Аудиопоток освобождается потоком микшера после удаления раунда.
 	await create_timer(0.3).timeout
 	quit(1 if _failures else 0)
+
+
+func _check_full_field_throw() -> void:
+	var sling := preload("res://scenes/gameplay/slingshot.tscn").instantiate() as Slingshot
+	root.add_child(sling)
+	sling.position = Vector2(235, 460)
+	var cat := CAT_SCENE.instantiate() as CatProjectile
+	root.add_child(cat)
+	sling.load_projectile(cat)
+	_check(sling.launch_from_pull(Vector2(-1, 1) * sling.max_pull), "Full pull launches an ordinary cat without an ability")
+	var crossed_field := false
+	for tick in 180:
+		await physics_frame
+		if cat.position.y + CatProjectile.RADIUS >= 620.0:
+			break
+		if cat.position.x >= 1240.0:
+			crossed_field = true
+			break
+	_check(crossed_field, "A full diagonal throw reaches the far edge before landing")
+	cat.queue_free()
+	sling.queue_free()
+	await process_frame
 
 
 func _wait_for_ready(game: Node) -> void:

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Магнитная крыша"
+biome = "mountain"
+shots = 4
+dog_positions = PackedVector2Array(800, 595, 1090, 595)
+block_positions = PackedVector2Array(710.0, 555.0, 890.0, 555.0, 800, 480, 990.0, 535.0, 1190.0, 535.0, 1090, 440)
+block_sizes = PackedVector2Array(28, 130, 28, 130, 208, 20, 28, 170, 28, 170, 228, 20)
+block_materials = PackedStringArray("wood", "wood", "metal", "wood", "wood", "metal")
+cat_sequence = PackedStringArray("magnet", "wind", "homing", "homing")
+dog_kinds = PackedStringArray("scout", "scout")
+par_shots = 2

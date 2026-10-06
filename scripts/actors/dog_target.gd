@@ -215,6 +215,7 @@ func receive_hit(strength: float) -> void:
 	if shield_active:
 		shield_active = false
 		_hit_cooldown_left = hit_cooldown_seconds
+		impact_received.emit(strength)
 		_surprise_time_left = 0.45
 		expression = &"hit"
 		queue_redraw()

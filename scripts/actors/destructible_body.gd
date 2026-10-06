@@ -2,6 +2,8 @@ class_name DestructibleBody
 extends RigidBody2D
 ## Shared impact handling; sustained structural loads are not new collisions.
 
+signal impact_received(strength: float)
+
 @export var impact_threshold: float = 260.0
 @export var spawn_grace_seconds: float = 0.75
 @export var hit_cooldown_seconds: float = 0.25
@@ -89,6 +91,7 @@ func receive_hit(strength: float) -> void:
 	if not _can_receive_hit(strength):
 		return
 	_hit_cooldown_left = hit_cooldown_seconds
+	impact_received.emit(strength)
 	destroy()
 
 

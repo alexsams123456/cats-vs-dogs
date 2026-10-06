@@ -32,6 +32,7 @@ func receive_hit(strength: float) -> void:
 	if not _can_receive_hit(strength):
 		return
 	_hit_cooldown_left = hit_cooldown_seconds
+	impact_received.emit(strength)
 	var damage: int = maxi(1, floori(strength / impact_threshold))
 	hits_left = maxi(0, hits_left - damage)
 	queue_redraw()

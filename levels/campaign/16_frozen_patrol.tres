@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Замёрзший патруль"
+biome = "glacier"
+shots = 5
+dog_positions = PackedVector2Array(760, 595, 970, 595, 1140, 595)
+block_positions = PackedVector2Array(890.0, 565.0, 1050.0, 565.0, 970, 500)
+block_sizes = PackedVector2Array(28, 110, 28, 110, 188, 20)
+block_materials = PackedStringArray("glass", "glass", "metal")
+cat_sequence = PackedStringArray("frost", "classic", "homing", "homing", "homing")
+dog_kinds = PackedStringArray("jumper", "jumper", "scout")
+par_shots = 3

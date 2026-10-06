@@ -13,6 +13,6 @@ block_sizes = PackedVector2Array(20, 140, 20, 140, 20, 140, 20, 140, 44, 140, 26
 block_materials = PackedStringArray("wood", "wood", "wood", "wood", "metal", "stone", "stone", "stone", "stone", "stone", "stone", "stone", "wood", "wood", "wood", "wood", "wood", "glass", "glass", "glass", "glass", "glass", "glass", "glass", "glass", "glass", "wood", "glass", "glass", "wood", "glass", "glass", "wood", "glass", "glass", "wood", "glass", "glass")
 dog_house_materials = PackedStringArray("glass", "stone", "", "", "")
 dog_house_types = PackedStringArray("igloo", "barrel", "", "", "")
-cat_sequence = PackedStringArray("frost", "zigzag", "splitter", "bomb", "wind", "heavy", "homing", "homing")
+cat_sequence = PackedStringArray("frost", "zigzag", "splitter", "bomb", "wind", "homing", "heavy", "homing")
 dog_kinds = PackedStringArray("scout", "scout", "jumper", "armored", "jumper")
 par_shots = 6

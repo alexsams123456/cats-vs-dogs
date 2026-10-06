@@ -137,6 +137,10 @@ func _landscape(biome: StringName) -> void:
 	var resumed := await _capture("ambient-" + biome + "-resumed")
 	_check(backdrop.animation_time > stopped, "%s: isolated backdrop clock resumes" % biome)
 	_check(frozen.get_data() != resumed.get_data(), "%s: landscape pixels change after resume" % biome)
+	# Дальние фазы: полёт/возвращение птицы, путь вагончиков, скольжение и метеор.
+	for phase: float in [3.5, 7.0, 10.7]:
+		backdrop.animation_time = phase
+		await _capture("ambient-%s-phase-%03d" % [biome, int(phase * 10)])
 	world.queue_free()
 	await process_frame
 

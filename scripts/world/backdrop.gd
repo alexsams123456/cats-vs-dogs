@@ -51,6 +51,7 @@ func _draw() -> void:
 	_draw_backyard_house()
 	_draw_fence()
 	_draw_garden()
+	_draw_garden_details()
 	_draw_ground()
 
 
@@ -290,6 +291,7 @@ func _draw_mountain_valley() -> void:
 	_stream_ribbon(river, 0.0, Color("bcd6ce"), Color("70b0b3"))
 	for item: Vector3 in [Vector3(91, 619, 30), Vector3(378, 619, 25), Vector3(449, 615, 17), Vector3(652, 599, 15), Vector3(1169, 619, 24), Vector3(1261, 612, 38), Vector3(1409, 620, 45)]:
 		_boulder(Vector2(item.x, item.y), item.z, Color("98a99a"))
+	_draw_mountain_details()
 	_draw_alpine_ground(false)
 
 
@@ -344,6 +346,7 @@ func _draw_glacial_valley() -> void:
 		draw_polyline(points, Color("95bdcf"), 1.3, true)
 	for item: Vector3 in [Vector3(65, 619, 42), Vector3(128, 616, 25), Vector3(397, 618, 26), Vector3(1182, 618, 29), Vector3(1279, 619, 61), Vector3(1428, 618, 40)]:
 		_ice_crystal(Vector2(item.x, item.y), item.z)
+	_draw_ice_arch()
 	_draw_alpine_ground(true)
 
 
@@ -373,6 +376,91 @@ func _ice_crystal(root: Vector2, height: float) -> void:
 		draw_colored_polygon(PackedVector2Array([tip, facet, right, root + Vector2(x, 0)]), Color("7bb8d0"))
 		draw_line(tip, left, Color("e9f8f3"), 1.7, true)
 	_ellipse(root + Vector2(0, 1), Vector2(height * 0.65, 3), Color("edf5ef"))
+
+
+func _draw_garden_details() -> void:
+	# Низкоконтрастные предметы сада остаются частью дальнего плана.
+	for x in [465, 661]:
+		draw_line(Vector2(x, 536), Vector2(x, 421), Color("a7ae88"), 4.0, true)
+		draw_circle(Vector2(x, 421), 3.0, Color("d4cd9e"))
+	var rope := PackedVector2Array()
+	for index in 25:
+		var progress := float(index) / 24.0
+		rope.append(Vector2(465 + progress * 196, 427 + sin(progress * PI) * 12))
+	draw_polyline(rope, Color("9ca888"), 1.4, true)
+	for item: Vector3 in [Vector3(151, 584, 39), Vector3(436, 579, 32)]:
+		draw_line(Vector2(item.x, item.y), Vector2(item.x, item.y - item.z), Color("8d9e78"), 2.0, true)
+	# Цветущая изгородь у дома и за дальним забором.
+	for index in 23:
+		var center := Vector2(166 + float(index) * 9, 534 + sin(float(index) * 1.8) * 6)
+		_ellipse(center, Vector2(13, 9), Color("8eab7b"))
+		for flower in 3:
+			var point := center + Vector2.from_angle(float(flower) * 2.3 + float(index)) * 7
+			draw_circle(point, 2.8, Color("e5b7b0") if index % 2 == 0 else Color("eee0ae"))
+	for index in 9:
+		var root := Vector2(1033 + index * 22, 552)
+		draw_line(root, root - Vector2(3, 18), Color("8fa779"), 1.5, true)
+		_ellipse(root - Vector2(3, 20), Vector2(6, 9), Color("b5aecd") if index % 2 == 0 else Color("e3b99f"))
+	# Скворечник и каменная дорожка рядом с домом.
+	draw_line(Vector2(117, 558), Vector2(117, 464), Color("a3ab86"), 3.0)
+	draw_rect(Rect2(105, 457, 24, 24), Color("d3be91"))
+	draw_colored_polygon(PackedVector2Array([Vector2(100, 458), Vector2(117, 444), Vector2(134, 458)]), Color("a68f79"))
+	draw_circle(Vector2(117, 467), 4, Color("869477"))
+	for index in 7:
+		_ellipse(Vector2(405 + index * 9, 546 + index * 9), Vector2(12 + index, 3), Color("d4cfab"))
+
+
+func _draw_mountain_details() -> void:
+	var cable := PackedVector2Array()
+	for index in 41:
+		cable.append(BackgroundActivity.cable_point(float(index) / 40))
+	draw_polyline(cable, Color("8ca3a3"), 1.5, true)
+	for point: Vector2 in [BackgroundActivity.CABLE_START, BackgroundActivity.CABLE_END]:
+		draw_line(point + Vector2(0, 132), point - Vector2(0, 9), Color("90a89c"), 4, true)
+		draw_line(point - Vector2(14, 3), point + Vector2(14, -3), Color("9fb1a4"), 4, true)
+		_boulder(point + Vector2(0, 132), 13, Color("a3b6a1"))
+	# Водопад выходит к верхней точке общей геометрии реки.
+	draw_colored_polygon(PackedVector2Array([Vector2(842, 413), Vector2(868, 409), Vector2(891, 477), Vector2(864, 482)]), Color("729e9e"))
+	draw_colored_polygon(PackedVector2Array([Vector2(849, 414), Vector2(863, 413), Vector2(882, 478), Vector2(869, 479)]), Color("b8d8d2"))
+	_boulder(Vector2(841, 422), 18, Color("91aa97"))
+	_boulder(Vector2(890, 484), 15, Color("a9bba0"))
+	# Маленькая мельница вдалеке, без контура игровых блоков.
+	draw_colored_polygon(PackedVector2Array([Vector2(287, 491), Vector2(294, 442), Vector2(306, 442), Vector2(313, 491)]), Color("c3bd9c"))
+	draw_colored_polygon(PackedVector2Array([Vector2(285, 447), Vector2(300, 431), Vector2(315, 447)]), Color("919b85"))
+	draw_rect(Rect2(297, 471, 6, 13), Color("95a68e"))
+	for item: Vector3 in [Vector3(175, 566, 0.65), Vector3(1026, 546, 0.55)]:
+		var root := Vector2(item.x, item.y)
+		draw_set_transform(root, 0, Vector2.ONE * item.z)
+		draw_rect(Rect2(-32, -28, 64, 28), Color("b5b79a"))
+		draw_colored_polygon(PackedVector2Array([Vector2(-40, -27), Vector2(0, -52), Vector2(40, -27)]), Color("819885"))
+		draw_rect(Rect2(-17, -21, 10, 10), Color("d6d6ab"))
+		draw_rect(Rect2(9, -21, 10, 10), Color("d6d6ab"))
+		draw_set_transform(Vector2.ZERO)
+	for index in 16:
+		var root := Vector2(400 + index * 11, 607 + sin(float(index) * 1.4) * 4)
+		draw_line(root, root - Vector2(2, 10), Color("7f9d79"), 1.5)
+		draw_circle(root - Vector2(2, 12), 3, Color("d9d7b5") if index % 2 else Color("b8aac7"))
+
+
+func _draw_ice_arch() -> void:
+	var outer := PackedVector2Array()
+	var inner := PackedVector2Array()
+	for index in 33:
+		var angle := PI + float(index) * PI / 32.0
+		outer.append(Vector2(415, 514) + Vector2(cos(angle) * 86, sin(angle) * 89))
+		inner.append(Vector2(415, 514) + Vector2(cos(angle) * 60, sin(angle) * 64))
+	inner.reverse()
+	outer.append_array(inner)
+	draw_colored_polygon(outer, Color("a5cdda"))
+	draw_arc(Vector2(415, 514), 76, PI, TAU, 40, Color("d6e9ed"), 4, true)
+	for index in 9:
+		var angle := PI + float(index + 1) * PI / 10.0
+		var point := Vector2(415, 514) + Vector2(cos(angle) * 66, sin(angle) * 68)
+		draw_colored_polygon(PackedVector2Array([point + Vector2(-3, 0), point + Vector2(3, 0), point + Vector2(0, 11 + index % 3 * 5)]), Color("d4e8eb"))
+	_ellipse(Vector2(415, 515), Vector2(102, 7), Color("e5eff0"))
+	for index in 12:
+		var center := Vector2(498 + index * 36, 574 + sin(float(index) * 1.6) * 8)
+		draw_line(center, center + Vector2(16, -3), Color(0.92, 0.98, 1, 0.35), 1.3, true)
 
 
 func _draw_alpine_ground(frozen: bool) -> void:

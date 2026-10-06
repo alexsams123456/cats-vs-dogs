@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Каскад грузов"
+shots = 4
+par_shots = 1
+cat_sequence = PackedStringArray("classic", "bomb", "heavy", "homing")
+dog_positions = PackedVector2Array(810, 595, 890, 595)
+dog_kinds = PackedStringArray("scout", "scout")
+weight_positions = PackedVector2Array(850, 200, 850, 430)
+block_positions = PackedVector2Array(740, 565, 960, 565, 850, 499)
+block_sizes = PackedVector2Array(36, 110, 36, 110, 260, 20)
+block_materials = PackedStringArray("wood", "wood", "glass")

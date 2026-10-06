@@ -31,6 +31,7 @@ func _test_world(biome: StringName) -> void:
 	_check(ambient.biome == biome, "Decor uses the selected biome: " + String(biome))
 	_check(_only_decoration(backdrop), "Decor has no physics or input handlers: " + String(biome))
 	_check(backdrop.animation_time > 0.0 and is_equal_approx(ambient._time, backdrop.animation_time), "Every biome follows the backdrop clock")
+	_check(ambient._activity.biome == biome and is_equal_approx(ambient._activity.animation_time, backdrop.animation_time), "Background scenes follow the same biome and pausable clock")
 	_check(_random_sequence() == expected_random, "Creating and animating decor leaves the gameplay RNG unchanged")
 	paused = true
 	var frozen := _snapshot(backdrop)
@@ -80,7 +81,7 @@ func _only_decoration(node: Node) -> bool:
 
 func _snapshot(backdrop: Node2D) -> Array:
 	var ambient := backdrop.get_node("AmbientLife") as AmbientLife
-	var result: Array = [backdrop.get("animation_time"), ambient._time, ambient._cloud_x.duplicate()]
+	var result: Array = [backdrop.get("animation_time"), ambient._time, ambient._cloud_x.duplicate(), ambient._activity.animation_time, ambient._activity.biome]
 	_append_transforms(backdrop, result)
 	return result
 

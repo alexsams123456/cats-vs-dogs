@@ -6,7 +6,6 @@ const DIMENSIONS: Array[Vector2i] = [Vector2i(1280, 720), Vector2i(1600, 720), V
 
 var _checks: int = 0
 var _failures: int = 0
-var _initial_quit_on_go_back: bool
 
 
 func _initialize() -> void:
@@ -14,7 +13,6 @@ func _initialize() -> void:
 
 
 func _capture() -> void:
-	_initial_quit_on_go_back = quit_on_go_back
 	DirAccess.make_dir_recursive_absolute("res://.artifacts")
 	var app := APP_SCENE.instantiate() as GameApp
 	app.profile_path = ""
@@ -43,18 +41,19 @@ func _capture_empty_menu(app: GameApp, dimensions: Vector2i) -> void:
 	var menu := app.campaign
 	_check(menu.continue_index == 0 and menu.continue_button.text.begins_with("Играть"), "Empty profile offers first yard")
 	await _shot("home", dimensions)
-	_check_layout(menu)
+	await _check_layout(menu)
 	if dimensions.x == 1280:
 		await _check_animation(menu, dimensions)
 	_click(menu.campaign_button, false)
 	await _layout()
 	_check(menu.page == &"campaign", "Mouse opens campaign from main menu")
 	await _shot("campaign", dimensions)
-	_check_layout(menu)
+	await _check_layout(menu)
 	for button in menu.level_buttons:
+		await _reveal(button)
 		_check(button.is_visible_in_tree() and root.get_visible_rect().encloses(button.get_global_rect()), "Every yard action is visible on the campaign page")
-	for panel in menu.chapter_panels:
-		_check(root.get_visible_rect().encloses(panel.get_global_rect()), "Every biome chapter fits the campaign page")
+	await _shot("campaign-chains", dimensions)
+	await _reveal(menu.level_buttons[1])
 	_click(menu.level_buttons[1], true)
 	await _layout()
 	_check(app.game == null and app.campaign == menu, "Touching locked yard does not start a round")
@@ -65,8 +64,8 @@ func _capture_empty_menu(app: GameApp, dimensions: Vector2i) -> void:
 	await _layout()
 	_check(menu.page == &"rating", "Touch opens local rating")
 	await _shot("rating", dimensions)
-	_check_layout(menu)
-	_check_rating(menu)
+	await _check_layout(menu)
+	await _check_rating(menu)
 	_key(KEY_ESCAPE)
 	await _layout()
 	_check(menu.page == &"home", "Escape closes rating")
@@ -78,7 +77,7 @@ func _capture_empty_menu(app: GameApp, dimensions: Vector2i) -> void:
 	_click(menu.continue_button, dimensions.x != 1280)
 	await _layout()
 	_check(app.game != null and app.game.campaign_mode and app.campaign_index == 0, "Main action starts first campaign yard by pointer")
-	_check(quit_on_go_back == _initial_quit_on_go_back, "Starting a round restores the original native Back policy")
+	_check(not quit_on_go_back, "Application continues intercepting native Back during a round")
 	_click(app.game.hud._pause_button, true)
 	await _layout()
 	_click(app.game.hud._overlay_menu_button, true)
@@ -118,19 +117,19 @@ func _capture_progress(app: GameApp, dimensions: Vector2i) -> void:
 	await _layout()
 	_check(app.campaign.continue_index == 2 and app.campaign.continue_button.text.begins_with("Продолжить"), "Saved progress selects first unbeaten yard")
 	await _shot("home-progress", dimensions)
-	_check_layout(app.campaign)
+	await _check_layout(app.campaign)
 	_click(app.campaign.campaign_button, true)
 	await _layout()
 	await _shot("campaign-progress", dimensions)
-	_check_layout(app.campaign)
+	await _check_layout(app.campaign)
 	_check(not app.campaign.level_buttons[2].disabled and app.campaign.level_buttons[3].disabled, "Progress unlocks exactly the next yard")
 	_click(app.campaign.back_button, false)
 	await _layout()
 	_click(app.campaign.rating_button, false)
 	await _layout()
 	await _shot("rating-progress", dimensions)
-	_check_layout(app.campaign)
-	_check_rating(app.campaign)
+	await _check_layout(app.campaign)
+	await _check_rating(app.campaign)
 	_click(app.campaign.back_button, true)
 	await _layout()
 	_click(app.campaign.continue_button, true)
@@ -149,11 +148,11 @@ func _capture_completion(app: GameApp, dimensions: Vector2i) -> void:
 	await _layout()
 	_check(app.campaign.continue_index == 0 and app.campaign.continue_button.text.begins_with("Переиграть"), "Completed campaign offers replay")
 	await _shot("home-complete", dimensions)
-	_check_layout(app.campaign)
+	await _check_layout(app.campaign)
 	_click(app.campaign.campaign_button, false)
 	await _layout()
 	await _shot("campaign-complete", dimensions)
-	_check_layout(app.campaign)
+	await _check_layout(app.campaign)
 	for button in app.campaign.level_buttons:
 		_check(not button.disabled, "Completed campaign keeps all yards replayable")
 	_click(app.campaign.back_button, true)
@@ -161,8 +160,8 @@ func _capture_completion(app: GameApp, dimensions: Vector2i) -> void:
 	_click(app.campaign.rating_button, true)
 	await _layout()
 	await _shot("rating-complete", dimensions)
-	_check_layout(app.campaign)
-	_check_rating(app.campaign)
+	await _check_layout(app.campaign)
+	await _check_rating(app.campaign)
 	_click(app.campaign.back_button, false)
 	await _layout()
 	_click(app.campaign.continue_button, false)
@@ -193,19 +192,23 @@ func _check_layout(menu: CampaignMenu) -> void:
 		var button := node as Button
 		if not button.is_visible_in_tree():
 			continue
+		await _reveal(button)
 		buttons.append(button)
 		_check(root.get_visible_rect().encloses(button.get_global_rect()), "Visible menu action fits viewport: " + button.text)
 		_check(button.size.y >= 40.0, "Menu action retains a usable touch height: " + button.text)
 	for first in buttons.size():
 		for second in range(first + 1, buttons.size()):
+			if _scroll_parent(buttons[first]) != _scroll_parent(buttons[second]):
+				continue
 			_check(not buttons[first].get_global_rect().intersects(buttons[second].get_global_rect()), "Menu actions do not overlap")
 
 
 func _check_rating(menu: CampaignMenu) -> void:
 	_check(menu.rating_rows.size() == CampaignCatalog.LEVELS.size(), "Local rating lists exactly the campaign yards")
-	_check("%d/18" % CampaignCatalog.total_stars(menu.profile) in menu.rating_summary.text.replace(" ", ""), "Local rating summary matches saved stars")
+	_check("%d/%d" % [CampaignCatalog.total_stars(menu.profile), CampaignCatalog.LEVELS.size() * 3] in menu.rating_summary.text.replace(" ", ""), "Local rating summary matches saved stars")
 	for index in menu.rating_rows.size():
 		var row := menu.rating_rows[index]
+		await _reveal(row)
 		_check(row.is_visible_in_tree() and root.get_visible_rect().encloses(row.get_global_rect()), "Local rating row fits viewport")
 		var best := menu.profile.best_shots_for(CampaignCatalog.IDS[index])
 		if best < 0:
@@ -230,6 +233,22 @@ func _click(button: BaseButton, touch: bool) -> void:
 			event.button_index = MOUSE_BUTTON_LEFT
 			event.pressed = pressed
 			root.push_input(event, true)
+
+
+func _reveal(control: Control) -> void:
+	var scroll := _scroll_parent(control)
+	if scroll != null:
+		scroll.ensure_control_visible(control)
+		await _layout()
+
+
+func _scroll_parent(control: Control) -> ScrollContainer:
+	var parent := control.get_parent()
+	while parent != null:
+		if parent is ScrollContainer:
+			return parent as ScrollContainer
+		parent = parent.get_parent()
+	return null
 
 
 func _key(code: Key) -> void:

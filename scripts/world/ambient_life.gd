@@ -5,6 +5,7 @@ extends Node2D
 const MEADOW_TREE := preload("res://scripts/world/meadow_tree.gd")
 const SCENERY_PINE := preload("res://scripts/world/scenery_pine.gd")
 const SUN_FACE := preload("res://scripts/visuals/sun_face.gd")
+const BACKGROUND_ACTIVITY := preload("res://scripts/world/background_activity.gd")
 const PINE_ROOTS := [Vector3(-38, 609, 155), Vector3(70, 608, 111), Vector3(149, 604, 77), Vector3(1179, 603, 107), Vector3(1328, 618, 173), Vector3(1430, 616, 127)]
 const LEAF_COLORS := [Color("b5b975"), Color("d4bd77"), Color("92ad72")]
 const ICE_TIPS := [Vector2(65, 577), Vector2(128, 591), Vector2(397, 592), Vector2(1182, 589), Vector2(1279, 558), Vector2(1428, 578)]
@@ -46,6 +47,7 @@ var _time: float = 0.0
 var _visible_world := Rect2(0, 0, 1280, 720)
 var biome: StringName = &"backyard"
 var sun_face: SunFace
+var _activity: BackgroundActivity
 
 
 func _ready() -> void:
@@ -55,6 +57,11 @@ func _ready() -> void:
 	sun_face.position = SUN_CENTER
 	sun_face.show_behind_parent = true
 	add_child(sun_face)
+	_activity = BACKGROUND_ACTIVITY.new()
+	_activity.name = "BackgroundActivity"
+	_activity.biome = biome
+	_activity.show_behind_parent = true
+	add_child(_activity)
 	_add_tree(Vector2(25, 620), Vector2(0.95, 0.95), false)
 	_add_tree(Vector2(1340, 620), Vector2(-1.06, 1.06), true)
 	for item: Vector3 in PINE_ROOTS:
@@ -70,6 +77,8 @@ func _ready() -> void:
 
 func set_biome(value: StringName) -> void:
 	biome = value
+	if is_instance_valid(_activity):
+		_activity.advance(_time, biome)
 	if is_instance_valid(sun_face):
 		sun_face.visible = biome != &"glacier"
 	for tree: Node2D in _trees:
@@ -99,6 +108,7 @@ func _add_tree(root: Vector2, tree_scale: Vector2, warm: bool) -> void:
 func advance(delta: float, elapsed: float, visible_world: Rect2) -> void:
 	_time = elapsed
 	_visible_world = visible_world
+	_activity.advance(elapsed, biome)
 	if is_instance_valid(sun_face) and sun_face.visible:
 		sun_face.advance(delta)
 	for index in _cloud_x.size():
@@ -110,10 +120,10 @@ func advance(delta: float, elapsed: float, visible_world: Rect2) -> void:
 			_cloud_x[index] = left + fposmod(_cloud_x[index] - left, right - left)
 	for index in _trees.size():
 		var phase := float(index) * 2.4
-		_trees[index].rotation = sin(_time * 0.57 + phase) * 0.007 + sin(_time * 1.13 + phase) * 0.002
+		_trees[index].rotation = sin(_time * 0.57 + phase) * 0.016 + sin(_time * 1.13 + phase) * 0.004
 	for index in _pines.size():
 		var phase := float(index) * 1.7
-		_pines[index].rotation = sin(_time * 0.86 + phase) * 0.013 + sin(_time * 1.61 + phase) * 0.004
+		_pines[index].rotation = sin(_time * 0.86 + phase) * 0.021 + sin(_time * 1.61 + phase) * 0.006
 	queue_redraw()
 
 
@@ -123,6 +133,7 @@ func _draw() -> void:
 		_draw_snowfall()
 		_draw_ice_shimmer()
 		_draw_snow_drift()
+		_draw_winter_details()
 		return
 	for index in _cloud_x.size():
 		var bob := sin(_time * 0.24 + float(index) * 2.0) * 2.5
@@ -131,6 +142,7 @@ func _draw() -> void:
 	if biome == &"mountain":
 		_draw_mountain_breeze()
 		_draw_water_current()
+		_draw_mountain_details()
 		return
 	_draw_water_glints()
 	_draw_water_current()
@@ -145,6 +157,112 @@ func _draw() -> void:
 		_draw_butterfly(index)
 	for index in 2:
 		_draw_dragonfly(index)
+	_draw_garden_details()
+
+
+func _draw_garden_details() -> void:
+	# Полотенца и флажки закреплены сверху, низ плавно выгибается ветром.
+	for index in 5:
+		var x := 487.0 + float(index) * 34.0
+		var top := 427.0 + sin((x - 465.0) / 196.0 * PI) * 12.0
+		var sway := _wind_at(x) * 1.4
+		var color: Color = [Color("c2c9df"), Color("e4bead"), Color("e8dfb4"), Color("aec8bc"), Color("d6b8ce")][index]
+		var cloth := PackedVector2Array([Vector2(x, top), Vector2(x + 22, top), Vector2(x + 22 + sway, top + 30), Vector2(x + 11 + sway, top + 33), Vector2(x + sway, top + 30)])
+		draw_colored_polygon(cloth, color)
+		draw_line(Vector2(x + 5, top + 4), Vector2(x + 5 + sway, top + 26), color.lightened(0.12), 2, true)
+		for peg in [3, 19]:
+			draw_line(Vector2(x + peg, top - 3), Vector2(x + peg, top + 4), Color("b6a281"), 2.3, true)
+	for index in 2:
+		var center := Vector2(151, 545) if index == 0 else Vector2(436, 547)
+		_draw_rotor(center, 12.0, _time * (1.5 + index * 0.3), true)
+	# Пчёлы следуют замкнутым маршрутам над цветами, не создавая новых узлов.
+	for index in 3:
+		var phase := _time * 1.0 + float(index) * 2.1
+		var center := Vector2(187 + index * 63, 514) + Vector2(sin(phase) * 26, sin(phase * 2) * 8)
+		var wing := 2.0 + absf(sin(_time * 22)) * 3
+		draw_set_transform(center, cos(phase) * 0.15)
+		draw_circle(Vector2(-1, -wing), 2.4, Color(0.97, 0.98, 0.9, 0.7), true, -1, true)
+		draw_line(Vector2(-3, 0), Vector2(3, 0), Color("d3b76f"), 4, true)
+		draw_line(Vector2(0, -2), Vector2(0, 2), Color("8c906d"), 1.5, true)
+		draw_set_transform(Vector2.ZERO)
+
+
+func _draw_rotor(center: Vector2, radius: float, angle: float, colorful: bool) -> void:
+	draw_set_transform(center, angle)
+	for index in 4:
+		var direction := Vector2.from_angle(float(index) * PI * 0.5)
+		var side := direction.orthogonal()
+		var color := Color("d1c9a7")
+		if colorful:
+			color = [Color("dca99c"), Color("e1cc87"), Color("9cbeb3"), Color("b7b1d0")][index]
+		draw_colored_polygon(PackedVector2Array([Vector2.ZERO, direction * radius, direction * radius + side * radius * 0.55, side * radius * 0.2]), color)
+		draw_line(direction * 3, direction * radius, color.lightened(0.15), 1, true)
+	draw_circle(Vector2.ZERO, 2.4, Color("ede3bd"), true, -1, true)
+	draw_set_transform(Vector2.ZERO)
+
+
+func _draw_mountain_details() -> void:
+	_draw_rotor(Vector2(300, 447), 23, _time * 0.65, false)
+	# Блики падают по руслу водопада; пенка растворяется у подножия.
+	for index in 11:
+		var progress := fposmod(_time * 0.55 + float(index) / 11.0, 1.0)
+		var center := Vector2(853 + progress * 21 + sin(float(index) * 2) * 4, 415 + progress * 62)
+		draw_line(center, center + Vector2(1.5, 7), Color(0.91, 0.99, 0.96, sin(progress * PI) * 0.65), 1.8, true)
+	for index in 7:
+		var progress := fposmod(_time * 0.5 + float(index) / 7.0, 1.0)
+		var center := Vector2(872, 480) + Vector2(sin(float(index) * 2.7) * progress * 21, -sin(progress * PI) * 5)
+		draw_set_transform(center, 0, Vector2(1.0, 0.35))
+		draw_circle(Vector2.ZERO, 3 + progress * 6, Color(0.88, 0.97, 0.94, (1 - progress) * 0.38), true, -1, true)
+		draw_set_transform(Vector2.ZERO)
+	# Два орла медленно парят перед дальними вершинами.
+	for index in 2:
+		var phase := _time * 0.22 + float(index) * PI
+		var center := Vector2(450 + index * 340, 286 + index * 29) + Vector2(sin(phase) * 113, cos(phase) * 17)
+		var bank := sin(phase) * 0.23
+		draw_set_transform(center, bank, Vector2(0.75 + absf(cos(phase)) * 0.25, 1))
+		draw_polyline(PackedVector2Array([Vector2(-15, -4), Vector2(-8, -6), Vector2(0, 0), Vector2(8, -6), Vector2(15, -4)]), Color("668590"), 2.3, true)
+		draw_line(Vector2(0, -1), Vector2(0, 5), Color("668590"), 2, true)
+		draw_set_transform(Vector2.ZERO)
+	for index in 3:
+		var phase := float(index) * 2.3
+		var center := Vector2(389 + index * 340, 489) + Vector2(sin(_time * 0.13 + phase) * 45, sin(_time * 0.3 + phase) * 3)
+		draw_set_transform(center, 0, Vector2(1, 0.11))
+		draw_circle(Vector2.ZERO, 70, Color(0.89, 0.94, 0.84, 0.09), true, -1, true)
+		draw_set_transform(Vector2.ZERO)
+
+
+func _draw_winter_details() -> void:
+	for index in 22:
+		var center := Vector2(-80 + index * 71, 81 + float(index * 47 % 215))
+		var pulse := pow(maxf(0, sin(_time * 0.8 + float(index) * 1.7)), 6)
+		_draw_sparkle(center, 1.5 + pulse * 2.3, Color(0.91, 0.98, 1, 0.22 + pulse * 0.48))
+	# Один короткий метеор раз в 14 секунд, с плавным появлением и затуханием.
+	var meteor := fposmod(_time + 4, 14.0) / 1.7
+	if meteor < 1:
+		var center := Vector2(305, 97).lerp(Vector2(559, 227), meteor)
+		var alpha := sin(meteor * PI) * 0.7
+		for segment in 9:
+			var tail := Vector2(-float(segment) * 6, -float(segment) * 3)
+			draw_line(center + tail, center + tail + Vector2(-6, -3), Color(0.85, 0.96, 1, alpha * (1 - float(segment) / 9)), 1.8, true)
+		_draw_sparkle(center, 3, Color(0.97, 1, 1, alpha))
+	for index in 9:
+		var angle := PI + float(index + 1) * PI / 10
+		var center := Vector2(415, 514) + Vector2(cos(angle) * 77, sin(angle) * 79)
+		var pulse := pow(maxf(0, sin(_time * 1.1 - float(index) * 0.7)), 4)
+		_draw_sparkle(center, 2 + pulse * 3, Color(0.83, 0.98, 1, 0.12 + pulse * 0.6))
+	# Низкий светящийся туман скользит над льдом, позади целей.
+	for index in 4:
+		var phase := float(index) * 2.0
+		var center := Vector2(471 + index * 183, 562 + index % 2 * 11) + Vector2(sin(_time * 0.18 + phase) * 38, sin(_time * 0.4 + phase) * 3)
+		draw_set_transform(center, 0, Vector2(1, 0.09))
+		draw_circle(Vector2.ZERO, 91, Color(0.82, 0.95, 1, 0.13), true, -1, true)
+		draw_set_transform(Vector2.ZERO)
+
+
+func _draw_sparkle(center: Vector2, radius: float, color: Color) -> void:
+	draw_line(center - Vector2(radius, 0), center + Vector2(radius, 0), color, 1, true)
+	draw_line(center - Vector2(0, radius), center + Vector2(0, radius), color, 1, true)
+	draw_circle(center, 1.1, color, true, -1, true)
 
 
 func _draw_polar_sky() -> void:
@@ -161,13 +279,13 @@ func _draw_polar_sky() -> void:
 		var lower_colors := PackedColorArray()
 		for index in 49:
 			var x := -160.0 + float(index) * 35.0
-			var phase := x * 0.005 + float(band) * 0.8 + _time * 0.11
+			var phase := x * 0.005 + float(band) * 0.8 + _time * 0.18
 			var y := 126.0 + float(band) * 29.0 + sin(phase) * 31.0 + sin(phase * 1.9) * 12.0
 			var fade := sin(float(index) / 48.0 * PI)
 			upper.append(Vector2(x, y - 46.0 - sin(phase * 1.3) * 14.0))
 			lower.append(Vector2(x, y))
 			colors.append(Color(0.53, 0.89, 0.85, 0.0))
-			lower_colors.append(Color(0.59, 0.96, 0.82, 0.18 * fade) if band != 1 else Color(0.71, 0.77, 0.97, 0.16 * fade))
+			lower_colors.append(Color(0.59, 0.96, 0.82, 0.26 * fade) if band != 1 else Color(0.71, 0.77, 0.97, 0.22 * fade))
 		lower.reverse()
 		lower_colors.reverse()
 		upper.append_array(lower)
@@ -176,7 +294,7 @@ func _draw_polar_sky() -> void:
 
 
 func _draw_snowfall() -> void:
-	for index in 34:
+	for index in 48:
 		var phase := float(index) * 1.71
 		var x := _visible_world.position.x - 20.0 + fposmod(float(index) * 163.0 + _time * (9.0 + float(index % 4) * 2.0), _visible_world.size.x + 40.0)
 		var y := 55.0 + fposmod(float(index) * 73.0 + _time * (11.0 + float(index % 3) * 3.0), 559.0)
@@ -344,7 +462,7 @@ func _draw_grass(x: float, index: int) -> void:
 
 
 func _wind_at(x: float) -> float:
-	return sin(_time * 1.3 - x * 0.008) * 3.5 + sin(_time * 0.59 + x * 0.019) * 1.8 + 1.2
+	return sin(_time * 1.3 - x * 0.008) * 5.0 + sin(_time * 0.59 + x * 0.019) * 2.5 + 1.2
 
 
 func _draw_flower(index: int) -> void:

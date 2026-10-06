@@ -22,6 +22,7 @@ var chapter_panels: Array[PanelContainer] = []
 var continue_button: Button
 var campaign_button: Button
 var rating_button: Button
+var rewards_button: Button
 var sandbox_button: Button
 var editor_button: Button
 var back_button: Button
@@ -40,6 +41,7 @@ var _home_panel: PanelContainer
 var _home_note: Label
 var _campaign_page: VBoxContainer
 var _rating_page: VBoxContainer
+var reward_collection: RewardCollection
 var _grid: GridContainer
 var _chapter_grids: Array[GridContainer] = []
 var _chapter_contents: Array[GridContainer] = []
@@ -50,6 +52,7 @@ var _bold_font: FontVariation
 var _button_tweens: Dictionary = {}
 var _previous_quit_on_go_back: bool = true
 var _menu_windows: Array[Window] = []
+var _startup_progress: float = 1.0
 
 
 func _ready() -> void:
@@ -72,6 +75,7 @@ func _ready() -> void:
 	ui_theme.set_color("font_color", "Label", INK)
 	theme = ui_theme
 	_find_continue()
+	RewardCatalog.synchronize(profile)
 	_backdrop = MenuBackdrop.new()
 	_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_backdrop)
@@ -88,6 +92,9 @@ func _ready() -> void:
 	_build_home(pages)
 	_build_campaign(pages)
 	_build_rating(pages)
+	reward_collection = RewardCollection.new()
+	reward_collection.profile = profile
+	pages.add_child(reward_collection)
 	for node in find_children("*", "Window", true, false):
 		var window := node as Window
 		_menu_windows.append(window)
@@ -123,7 +130,7 @@ func _build_header(column: VBoxContainer) -> void:
 	_page_title = _label("БОЛЬШОЕ ПРИКЛЮЧЕНИЕ В МАЛЕНЬКОМ ДВОРЕ", 16, true)
 	_page_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(_page_title)
-	var stars := _label("★  %d / 18" % CampaignCatalog.total_stars(profile), 22, true)
+	var stars := _label("★  %d / %d" % [CampaignCatalog.total_stars(profile), CampaignCatalog.LEVELS.size() * 3], 22, true)
 	stars.autowrap_mode = TextServer.AUTOWRAP_OFF
 	stars.text_direction = Control.TEXT_DIRECTION_LTR
 	stars.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -197,11 +204,11 @@ func _build_home(parent: Control) -> void:
 	_home_panel.add_theme_stylebox_override("panel", panel_style)
 	_home.add_child(_home_panel)
 	var menu := VBoxContainer.new()
-	menu.add_theme_constant_override("separation", 10)
+	menu.add_theme_constant_override("separation", 8)
 	_home_panel.add_child(menu)
 	menu.add_child(_label("ДВОР ЗОВЁТ!", 16, true))
 	menu.add_child(_label("Вперёд, команда", 31, true))
-	var next := tr("Все 6 уровней пройдены — собери 18 звёзд!") if _completed else tr("Уровень %d · %s") % [continue_index + 1, tr(CampaignCatalog.LEVELS[continue_index].title)]
+	var next := tr("Все %d уровней пройдены — собери %d звёзд!") % [CampaignCatalog.LEVELS.size(), CampaignCatalog.LEVELS.size() * 3] if _completed else tr("Уровень %d · %s") % [continue_index + 1, tr(CampaignCatalog.LEVELS[continue_index].title)]
 	var next_label := _label(next, 16)
 	next_label.add_theme_color_override("font_color", MUTED)
 	menu.add_child(next_label)
@@ -214,12 +221,15 @@ func _build_home(parent: Control) -> void:
 	divider.add_theme_stylebox_override("separator", _line_style())
 	divider.custom_minimum_size.y = 8
 	menu.add_child(divider)
-	campaign_button = _navigation_button("Кампания", "3 мира · 6 уровней", &"map", Color("e6edd6"))
+	campaign_button = _navigation_button("Кампания", tr("%d глав · %d уровней") % [CampaignCatalog.CHAPTER_TITLES.size(), CampaignCatalog.LEVELS.size()], &"map", Color("e6edd6"))
 	campaign_button.pressed.connect(func() -> void: show_page(&"campaign"))
 	menu.add_child(campaign_button)
 	rating_button = _navigation_button("Рейтинг", "Твои звёзды и лучшие броски", &"trophy", Color("f9e8b6"))
 	rating_button.pressed.connect(func() -> void: show_page(&"rating"))
 	menu.add_child(rating_button)
+	rewards_button = _button(tr("Награды: %d / %d").replace("%d / %d", "\u2066%d / %d\u2069") % [profile.rewards.size(), RewardCatalog.IDS.size()], true)
+	rewards_button.pressed.connect(func() -> void: show_page(&"rewards"))
+	menu.add_child(rewards_button)
 	editor_button = _navigation_button("Редактор", "Построй свой идеальный двор", &"tools", Color("e3e9e8"))
 	editor_button.pressed.connect(editor_requested.emit)
 	menu.add_child(editor_button)
@@ -244,7 +254,7 @@ func _build_campaign(parent: Control) -> void:
 	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.add_child(titles)
 	titles.add_child(_label("От тёплого двора до ледяных крепостей", 28, true))
-	titles.add_child(_label("Три мира. Всё прочнее укрытия, всё хитрее конструкции.", 17))
+	titles.add_child(_label("Верёвки, грузы и обвалы", 17))
 	var play := _button(_continue_text())
 	play.custom_minimum_size.x = 220
 	play.pressed.connect(func() -> void: level_requested.emit(continue_index))
@@ -291,7 +301,7 @@ func _add_chapter(chapter: int) -> void:
 	title.add_theme_color_override("font_color", CampaignCatalog.CHAPTER_COLORS[chapter])
 	titles.add_child(title)
 	titles.add_child(_label(CampaignCatalog.CHAPTER_DETAILS[chapter], 14))
-	var difficulty := _label(tr("Сложность: %d / 3") % (chapter + 1), 13, true)
+	var difficulty := _label(tr("Сложность: %d / %d") % [chapter + 1, CampaignCatalog.CHAPTER_TITLES.size()], 13, true)
 	difficulty.add_theme_color_override("font_color", CampaignCatalog.CHAPTER_COLORS[chapter])
 	titles.add_child(difficulty)
 	var levels := GridContainer.new()
@@ -300,7 +310,7 @@ func _add_chapter(chapter: int) -> void:
 	levels.add_theme_constant_override("v_separation", 8)
 	column.add_child(levels)
 	_chapter_grids.append(levels)
-	for index in range(chapter * 2, chapter * 2 + 2):
+	for index in range(CampaignCatalog.CHAPTER_STARTS[chapter], CampaignCatalog.CHAPTER_STARTS[chapter + 1]):
 		_add_level(index, levels)
 
 
@@ -374,7 +384,7 @@ func _build_rating(parent: Control) -> void:
 	for level_id in CampaignCatalog.IDS:
 		if profile.stars_for(level_id) > 0:
 			completed_count += 1
-	rating_summary = _label(tr("★  %d / 18     ·     Уровней пройдено: %d / 6") % [total, completed_count], 26, true)
+	rating_summary = _label(tr("★  %d / %d     ·     Уровней пройдено: %d / %d") % [total, CampaignCatalog.LEVELS.size() * 3, completed_count, CampaignCatalog.LEVELS.size()], 26, true)
 	rating_summary.add_theme_color_override("font_color", CREAM)
 	rating_summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	summary_row.add_child(rating_summary)
@@ -408,7 +418,7 @@ func _build_rating(parent: Control) -> void:
 
 
 func show_page(page_id: StringName) -> void:
-	if page_id not in [&"home", &"campaign", &"rating"]:
+	if page_id not in [&"home", &"campaign", &"rating", &"rewards"]:
 		return
 	page = page_id
 	if _transition != null:
@@ -416,10 +426,13 @@ func show_page(page_id: StringName) -> void:
 	_home.visible = page == &"home"
 	_campaign_page.visible = page == &"campaign"
 	_rating_page.visible = page == &"rating"
+	reward_collection.visible = page == &"rewards"
 	back_button.visible = page != &"home"
 	_backdrop.showcase_visible = page == &"home"
-	_page_title.text = {&"home": "БОЛЬШОЕ ПРИКЛЮЧЕНИЕ В МАЛЕНЬКОМ ДВОРЕ", &"campaign": "КАМПАНИЯ  /  ТРИ МИРА", &"rating": "РЕЙТИНГ  /  ЛИЧНЫЕ РЕКОРДЫ"}[page]
+	_page_title.text = {&"home": "БОЛЬШОЕ ПРИКЛЮЧЕНИЕ В МАЛЕНЬКОМ ДВОРЕ", &"campaign": "КАМПАНИЯ  /  ТРИ МИРА", &"rating": "РЕЙТИНГ  /  ЛИЧНЫЕ РЕКОРДЫ", &"rewards": "Коллекция наград"}[page]
 	var target: Control = _home if page == &"home" else (_campaign_page if page == &"campaign" else _rating_page)
+	if page == &"rewards":
+		target = reward_collection
 	target.modulate.a = 0.0
 	_transition = create_tween()
 	_transition.tween_property(target, "modulate:a", 1.0, 0.32).set_trans(Tween.TRANS_SINE)
@@ -428,6 +441,19 @@ func show_page(page_id: StringName) -> void:
 		continue_button.grab_focus()
 	else:
 		back_button.grab_focus()
+
+
+func prepare_startup_entrance() -> void:
+	if _transition != null:
+		_transition.kill()
+	_home.modulate.a = 1.0
+	set_startup_progress(0.0)
+
+
+func set_startup_progress(progress: float) -> void:
+	_startup_progress = clampf(progress, 0.0, 1.0)
+	_margin.modulate.a = smoothstep(0.2, 1.0, _startup_progress)
+	_layout_home()
 
 
 func _input(event: InputEvent) -> void:
@@ -465,7 +491,7 @@ func _exit_tree() -> void:
 
 func _update_layout() -> void:
 	var wide := size.x >= size.y * 1.6
-	_grid.columns = 3 if wide else 1
+	_grid.columns = 2 if wide else 1
 	for levels in _chapter_grids:
 		levels.columns = 1 if wide else 2
 	for content in _chapter_contents:
@@ -497,6 +523,9 @@ func _layout_home() -> void:
 	var title_width := _home.size.x - panel_width - 90
 	_title.position = Vector2(34, maxf(10, _home.size.y * 0.02))
 	_title.size = Vector2(title_width, 0)
+	var entrance_offset := (1.0 - _startup_progress) * 22.0
+	_title.position.y += entrance_offset
+	_home_panel.position.y += entrance_offset
 	var font_size := int(clampf(title_width * 0.14, 70, 86))
 	_title_cats.add_theme_font_size_override("font_size", font_size)
 	_title_dogs.add_theme_font_size_override("font_size", font_size)
@@ -510,7 +539,7 @@ func _continue_text() -> String:
 
 func _navigation_button(title: String, subtitle: String, icon_kind: StringName, tint: Color) -> Button:
 	var button := _button("", true)
-	button.custom_minimum_size.y = 75
+	button.custom_minimum_size.y = 68
 	button.tooltip_text = tr(title) + ". " + tr(subtitle)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

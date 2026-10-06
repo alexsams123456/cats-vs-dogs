@@ -15,7 +15,7 @@ static func list_levels() -> Array[Dictionary]:
 		var path: String = DIRECTORY.path_join(file_name)
 		var level := load_level(path)
 		if level != null:
-			levels.append({"path": path, "title": level.title})
+			levels.append({"path": path, "title": level.title, "level": level})
 	levels.sort_custom(func(first: Dictionary, second: Dictionary) -> bool:
 		var comparison: int = String(first["title"]).naturalnocasecmp_to(String(second["title"]))
 		if comparison == 0:

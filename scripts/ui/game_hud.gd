@@ -23,6 +23,7 @@ var _hint: Label
 var _overlay: ColorRect
 var _result_title: Label
 var _result_detail: Label
+var _reward_notice: Label
 var _result_celebration: ResultCelebration
 var _result_cast: PackedStringArray = PackedStringArray()
 var _overlay_content: VBoxContainer
@@ -175,6 +176,8 @@ func _input(event: InputEvent) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and (event.echo or event.ctrl_pressed or event.alt_pressed or event.meta_pressed or event.shift_pressed):
+		return
 	if event.is_action_pressed("restart"):
 		get_viewport().set_input_as_handled()
 		restart_requested.emit()
@@ -184,6 +187,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("ability"):
 		get_viewport().set_input_as_handled()
 		ability_requested.emit()
+	elif InputMap.has_action("camera_reset") and event.is_action_pressed("camera_reset"):
+		get_viewport().set_input_as_handled()
+		camera_reset_requested.emit()
 
 
 func set_loadout(cat: CharacterDefinition, dog: CharacterDefinition, mixed_dogs: bool = false) -> void:
@@ -250,6 +256,15 @@ func set_tutorial_hint(message: String) -> void:
 	if _touch_ui and message == "Шаг 2/2. Нажми кнопку способности или E в полёте, до удара.":
 		message = "Шаг 2/2. Нажми кнопку способности в полёте, до удара."
 	_hint.text = tr(message) if not message.is_empty() else _default_hint
+	if not _touch_ui and message == "Шаг 2/2. Нажми кнопку способности или E в полёте, до удара.":
+		var events := InputMap.action_get_events("ability")
+		if not events.is_empty() and events[0] is InputEventKey and events[0].physical_keycode != KEY_E:
+			_hint.text = tr("Способность: %s — в полёте, до удара.") % OS.get_keycode_string(events[0].physical_keycode)
+
+
+func refresh_desktop_help() -> void:
+	_refresh_input_hints()
+	set_tutorial_hint(_tutorial_hint)
 
 
 func update_status(level_title: String, cats: int, dogs: int, flying: bool) -> void:
@@ -264,6 +279,7 @@ func update_status(level_title: String, cats: int, dogs: int, flying: bool) -> v
 
 
 func show_pause(value: bool) -> void:
+	_reward_notice.hide()
 	_result_celebration.stop()
 	_overlay_sound.show()
 	_overlay_content.add_theme_constant_override("separation", 20)
@@ -282,6 +298,7 @@ func set_result_cast(kinds: PackedStringArray) -> void:
 
 
 func show_result(won: bool, shots_used: int = 0, stars: int = 0) -> void:
+	_reward_notice.hide()
 	_result_shown = true
 	_overlay.show()
 	_overlay_content.add_theme_constant_override("separation", 12)
@@ -329,8 +346,14 @@ func _refresh_input_hints() -> void:
 	if _cat_definition == null:
 		return
 	var active := not _cat_definition.ability_action.is_empty()
-	_ability_button.text = tr(_cat_definition.ability_action) + ("" if _touch_ui else "  ·  E")
+	var key_name := "E"
+	var events := InputMap.action_get_events("ability")
+	if not events.is_empty() and events[0] is InputEventKey:
+		key_name = OS.get_keycode_string(events[0].physical_keycode)
+	_ability_button.text = tr(_cat_definition.ability_action) + ("" if _touch_ui else "  ·  " + key_name)
 	var hint := tr("Нажми кнопку способности в полёте, до удара.") if _touch_ui and active else tr(_cat_definition.ability_hint)
+	if not _touch_ui and active and key_name != "E":
+		hint = tr("Способность: %s — в полёте, до удара.") % key_name
 	_power_hint.text = tr(_cat_definition.display_name) + ": " + hint
 
 
@@ -391,6 +414,16 @@ func set_save_warning() -> void:
 	_result_detail.text = tr(_result_detail.text) + "\n" + tr("Не удалось записать прогресс. Результат сохранён до закрытия игры.")
 
 
+func show_rewards(rewards: PackedStringArray) -> void:
+	if rewards.is_empty():
+		return
+	var index := RewardCatalog.IDS.find(rewards[0])
+	if index < 0:
+		return
+	_reward_notice.text = tr("Новые награды: %d") % rewards.size() + " · " + tr(RewardCatalog.TITLES[index])
+	_reward_notice.show()
+
+
 func _build_overlay() -> void:
 	_overlay = ColorRect.new()
 	_overlay.mouse_force_pass_scroll_events = false
@@ -425,6 +458,12 @@ func _build_overlay() -> void:
 	_result_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_result_detail.custom_minimum_size.x = 528
 	content.add_child(_result_detail)
+	_reward_notice = _label("", 18)
+	_reward_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_reward_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_reward_notice.add_theme_color_override("font_color", Color("986321"))
+	_reward_notice.hide()
+	content.add_child(_reward_notice)
 	_pause_details = VBoxContainer.new()
 	_pause_details.add_theme_constant_override("separation", 10)
 	content.add_child(_pause_details)
