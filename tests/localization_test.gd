@@ -134,6 +134,7 @@ func _test_catalogs() -> void:
 
 func _test_language_selection() -> void:
 	var app := APP_SCENE.instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = _save_path
 	app.editor_recovery_path = _recovery_path
 	root.add_child(app)
@@ -181,6 +182,7 @@ func _test_language_selection() -> void:
 	app.queue_free()
 	await _settle()
 	app = APP_SCENE.instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = _save_path
 	app.editor_recovery_path = _recovery_path
 	root.add_child(app)

@@ -46,6 +46,7 @@ func _capture() -> void:
 	AudioServer.add_bus_effect(_master_bus, _recorder)
 	root.size = Vector2i(1280, 720)
 	var app := APP_SCENE.instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = ""
 	app.editor_recovery_path = ""
 	root.add_child(app)

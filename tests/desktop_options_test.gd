@@ -49,6 +49,7 @@ func _test_preferences() -> void:
 func _test_app() -> void:
 	var old_ability := InputMap.action_get_events("ability")
 	var app := APP_SCENE.instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = ""
 	app.editor_recovery_path = ""
 	root.add_child(app)
@@ -142,6 +143,7 @@ func _test_app() -> void:
 
 func _test_graphics() -> void:
 	var app := APP_SCENE.instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = ""
 	app.editor_recovery_path = ""
 	root.add_child(app)

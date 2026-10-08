@@ -6,8 +6,10 @@ const MENU_SCENE := preload("res://scenes/ui/roster_menu.tscn")
 const GAME_SCENE := preload("res://scenes/main.tscn")
 const EDITOR_SCENE := preload("res://scenes/editor/level_editor.tscn")
 const STARTUP_TRANSITION := preload("res://scenes/ui/startup_transition.tscn")
+const SCREEN_TRANSITION := preload("res://scenes/ui/screen_transition.tscn")
 
 @export var show_startup_intro: bool = false
+@export var animate_screen_changes: bool = true
 
 var selected_cat_id: StringName = &"classic"
 var selected_dog_id: StringName = &"scout"
@@ -22,6 +24,8 @@ var campaign_index: int = -1
 var _world_audio: WorldAudio
 var _preview_level: LevelDefinition
 var _transition_pending: bool = false
+var _screen_transition: CanvasLayer
+var _suspended_process_modes: Dictionary[int, int] = {}
 var _previous_quit_on_go_back: bool = true
 var _previous_inputs: Dictionary = {}
 var _previous_window_mode: DisplayServer.WindowMode
@@ -29,7 +33,50 @@ var _changed_window_mode: bool = false
 var _applied_fullscreen: bool = false
 
 
+func _change_screen(open_screen: Callable) -> void:
+	if not animate_screen_changes:
+		open_screen.call_deferred()
+		return
+	_screen_transition = SCREEN_TRANSITION.instantiate() as CanvasLayer
+	add_child(_screen_transition)
+	_freeze_screen()
+	_animate_screen_change.call_deferred(open_screen)
+
+
+func _freeze_screen() -> void:
+	for screen: Node in [campaign, menu, game, editor]:
+		if is_instance_valid(screen):
+			screen.process_mode = Node.PROCESS_MODE_DISABLED
+			# HUD паузы и диалоги обычно работают независимо от режима родителя.
+			for child: Node in screen.find_children("*", "", true, false):
+				if child.process_mode != Node.PROCESS_MODE_INHERIT:
+					_suspended_process_modes[child.get_instance_id()] = child.process_mode
+					child.process_mode = Node.PROCESS_MODE_INHERIT
+
+
+func _animate_screen_change(open_screen: Callable) -> void:
+	var curtain := _screen_transition.get_node("Curtain") as ScreenTransition
+	await curtain.cover()
+	open_screen.call()
+	_freeze_screen()
+	# Раскладка нового HUD завершается под непрозрачной шторкой.
+	await get_tree().process_frame
+	await curtain.reveal()
+	for instance_id: int in _suspended_process_modes:
+		var node := instance_from_id(instance_id) as Node
+		if is_instance_valid(node):
+			node.process_mode = _suspended_process_modes[instance_id]
+	_suspended_process_modes.clear()
+	for screen: Node in [campaign, menu, game, editor]:
+		if is_instance_valid(screen) and (not screen is CanvasItem or screen.visible):
+			screen.process_mode = Node.PROCESS_MODE_INHERIT
+	_screen_transition.queue_free()
+	_screen_transition = null
+	_transition_pending = false
+
+
 func _ready() -> void:
+	_setup_web_fps_counter()
 	_previous_quit_on_go_back = get_tree().quit_on_go_back
 	get_tree().quit_on_go_back = false
 	get_tree().root.go_back_requested.connect(_go_back)
@@ -52,6 +99,24 @@ func _ready() -> void:
 		_play_startup_intro()
 
 
+func _setup_web_fps_counter() -> void:
+	if not OS.has_feature("web"):
+		return
+	var counter: JavaScriptObject = JavaScriptBridge.get_interface("document").getElementById("fps")
+	if counter == null:
+		return
+	var timer := Timer.new()
+	timer.wait_time = 1.0
+	timer.ignore_time_scale = true
+	timer.process_mode = Node.PROCESS_MODE_ALWAYS
+	timer.timeout.connect(func() -> void:
+		counter.textContent = "FPS: %d" % Engine.get_frames_per_second()
+		counter.hidden = false
+	)
+	add_child(timer)
+	timer.start()
+
+
 func _play_startup_intro() -> void:
 	_transition_pending = true
 	campaign.process_mode = Node.PROCESS_MODE_DISABLED
@@ -60,7 +125,7 @@ func _play_startup_intro() -> void:
 	var intro := layer.get_node("Splash") as StartupTransition
 	intro.finished.connect(func() -> void:
 		campaign.process_mode = Node.PROCESS_MODE_INHERIT
-		_transition_pending = false
+		_transition_pending = is_instance_valid(_screen_transition)
 		layer.queue_free()
 	)
 	intro.begin(campaign)
@@ -112,7 +177,7 @@ func start_game(cat_id: StringName, dog_id: StringName) -> void:
 	campaign_index = -1
 	_preview_level = null
 	_transition_pending = true
-	_open_game.call_deferred()
+	_change_screen(_open_game)
 
 
 func start_editor_game(level: LevelDefinition) -> void:
@@ -121,7 +186,7 @@ func start_editor_game(level: LevelDefinition) -> void:
 	_preview_level = level.duplicate(true) as LevelDefinition
 	campaign_index = -1
 	_transition_pending = true
-	_open_game.call_deferred()
+	_change_screen(_open_game)
 
 
 func show_editor() -> void:
@@ -133,7 +198,7 @@ func show_editor() -> void:
 	_save_profile()
 	campaign_index = -1
 	_transition_pending = true
-	_open_editor.call_deferred()
+	_change_screen(_open_editor)
 
 
 func show_menu() -> void:
@@ -144,7 +209,7 @@ func show_sandbox() -> void:
 	if _transition_pending:
 		return
 	_transition_pending = true
-	_open_sandbox.call_deferred()
+	_change_screen(_open_sandbox)
 
 
 func _clear_screen() -> void:
@@ -178,7 +243,7 @@ func _open_sandbox() -> void:
 	menu.selection_changed.connect(_on_selection_changed)
 	add_child(menu)
 	_connect_sound_setting(menu)
-	_transition_pending = false
+	_transition_pending = is_instance_valid(_screen_transition)
 
 
 func _open_editor() -> void:
@@ -192,7 +257,7 @@ func _open_editor() -> void:
 		add_child(editor)
 	editor.process_mode = Node.PROCESS_MODE_INHERIT
 	editor.show()
-	_transition_pending = false
+	_transition_pending = is_instance_valid(_screen_transition)
 
 
 func _open_game() -> void:
@@ -222,14 +287,14 @@ func _open_game() -> void:
 	game.add_child(_world_audio)
 	_connect_sound_setting(game)
 	_apply_desktop_preferences()
-	_transition_pending = false
+	_transition_pending = is_instance_valid(_screen_transition)
 
 
 func _restart_round() -> void:
 	if _transition_pending:
 		return
 	_transition_pending = true
-	_open_game.call_deferred()
+	_change_screen(_open_game)
 
 
 func show_campaign() -> void:
@@ -237,7 +302,7 @@ func show_campaign() -> void:
 		return
 	_save_profile()
 	_transition_pending = true
-	_open_campaign.call_deferred()
+	_change_screen(_open_campaign)
 
 
 func start_campaign_level(index: int) -> void:
@@ -246,7 +311,7 @@ func start_campaign_level(index: int) -> void:
 	campaign_index = index
 	_preview_level = null
 	_transition_pending = true
-	_open_game.call_deferred()
+	_change_screen(_open_game)
 
 
 func _open_campaign() -> void:
@@ -262,7 +327,7 @@ func _open_campaign() -> void:
 	campaign.language_requested.connect(_on_language_requested)
 	add_child(campaign)
 	_connect_sound_setting(campaign)
-	_transition_pending = false
+	_transition_pending = is_instance_valid(_screen_transition)
 
 
 func _on_language_requested(locale: String) -> void:

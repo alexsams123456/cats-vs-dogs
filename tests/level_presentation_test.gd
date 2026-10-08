@@ -104,6 +104,7 @@ func _editor(level: LevelDefinition) -> void:
 
 func _preview() -> void:
 	var app := preload("res://scenes/app.tscn").instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = ""
 	app.editor_recovery_path = ""
 	root.add_child(app)
@@ -130,7 +131,7 @@ func _preview() -> void:
 	var activated := false
 	for tick in 1800:
 		await physics_frame
-		if not activated and app.game._flight_time >= 0.65:
+		if not activated and app.game._flight_time >= 0.65 / Slingshot.FLIGHT_SPEED_SCALE:
 			activated = true
 			app.game.use_ability()
 		if app.game.state == GameRound.RoundState.WON:

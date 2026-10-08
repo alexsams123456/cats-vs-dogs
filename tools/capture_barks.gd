@@ -35,6 +35,7 @@ func _capture() -> void:
 	AudioServer.set_bus_mute(_silent_bus, true)
 	root.size = Vector2i(1280, 720)
 	var app := load("res://scenes/app.tscn").instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.editor_recovery_path = ""
 	app.profile_path = ""
 	root.add_child(app)

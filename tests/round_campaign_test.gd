@@ -199,7 +199,7 @@ func _test_final_shot_settles() -> void:
 	game._flight_time = GameRound.MAX_FLIGHT_TIME - 0.1
 	await create_timer(0.25).timeout
 	_check(game.state == GameRound.RoundState.FLYING and game.shots_left == 0, "The last moving projectile is not cut off by the next-cat timeout")
-	await create_timer(1.2).timeout
+	await create_timer(1.2 / Slingshot.FLIGHT_SPEED_SCALE).timeout
 	_check(game.state == GameRound.RoundState.WON, "A real impact after the timer boundary still wins the final shot")
 	await _remove(game)
 	definition.dog_positions = PackedVector2Array([Vector2(1100, 595)])

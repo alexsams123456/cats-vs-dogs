@@ -4,6 +4,14 @@ extends RefCounted
 
 
 static func paint(canvas: CanvasItem, size: Vector2, material_id: StringName, damage: float = 0.0) -> void:
+	if StructureArtCache.enabled:
+		var key := "block:%s:%s:%s" % [material_id, size, damage]
+		if StructureArtCache.paint(canvas, key, Rect2(-size * 0.5, size), paint_uncached.bind(size, material_id, damage)):
+			return
+	paint_uncached(canvas, size, material_id, damage)
+
+
+static func paint_uncached(canvas: CanvasItem, size: Vector2, material_id: StringName, damage: float = 0.0) -> void:
 	var material := BlockMaterials.get_definition(material_id)
 	var rect := Rect2(-size * 0.5, size)
 	canvas.draw_rect(rect, material.edge_color)

@@ -5,14 +5,20 @@ extends Node2D
 const CABLE_START := Vector2(395, 345)
 const CABLE_END := Vector2(942, 304)
 const PENGUIN_COLOR := Color("7594a5")
+static var _ellipse_circle: PackedVector2Array = _unit_circle()
 
+var use_batched_polygons: bool = OS.has_feature("web")
 var biome: StringName = &"backyard"
 var animation_time: float = 0.0
 var _cabin_styles: Array[StyleBoxFlat] = []
 var _kite_shape := PackedVector2Array([Vector2(0, -25), Vector2(19, 0), Vector2(0, 29), Vector2(-19, 0)])
+var _kite_string := PackedVector2Array()
+var _kite_tail := PackedVector2Array()
 
 
 func _ready() -> void:
+	_kite_string.resize(21)
+	_kite_tail.resize(17)
 	for tint: Color in [Color("c6b496"), Color("9bbbbb")]:
 		var style := StyleBoxFlat.new()
 		style.bg_color = tint
@@ -43,29 +49,27 @@ func _draw() -> void:
 func _draw_kite() -> void:
 	var center := Vector2(478, 186) + Vector2(sin(animation_time * 0.57) * 44, sin(animation_time * 0.89) * 17)
 	var angle := sin(animation_time * 1.1) * 0.18
-	var string := PackedVector2Array()
 	for index in 21:
 		var progress := float(index) / 20.0
 		var point := center.lerp(Vector2(442, 400), progress)
 		point.x += sin(progress * PI) * (20 + sin(animation_time * 1.3 - progress * 4) * 7)
-		string.append(point)
-	draw_polyline(string, Color(0.52, 0.62, 0.56, 0.34), 1, true)
+		_kite_string[index] = point
+	draw_polyline(_kite_string, Color(0.52, 0.62, 0.56, 0.34), 1, true)
 	draw_set_transform(center, angle)
-	draw_colored_polygon(_kite_shape, Color("dbaa99"))
-	draw_colored_polygon(PackedVector2Array([Vector2(0, -25), Vector2(19, 0), Vector2.ZERO]), Color("e7d4a0"))
-	draw_colored_polygon(PackedVector2Array([Vector2.ZERO, Vector2(0, 29), Vector2(-19, 0)]), Color("a2bdb9"))
+	_paint_polygon(_kite_shape, Color("dbaa99"))
+	_paint_polygon(PackedVector2Array([Vector2(0, -25), Vector2(19, 0), Vector2.ZERO]), Color("e7d4a0"))
+	_paint_polygon(PackedVector2Array([Vector2.ZERO, Vector2(0, 29), Vector2(-19, 0)]), Color("a2bdb9"))
 	draw_line(Vector2(0, -25), Vector2(0, 29), Color("f0dfb6"), 1, true)
 	draw_line(Vector2(-19, 0), Vector2(19, 0), Color("f0dfb6"), 1, true)
-	var tail := PackedVector2Array()
 	for index in 17:
 		var distance := float(index) * 4.0
-		tail.append(Vector2(sin(animation_time * 2.3 - distance * 0.09) * distance * 0.17, 29 + distance))
-	draw_polyline(tail, Color("b7ae90"), 1.2, true)
+		_kite_tail[index] = Vector2(sin(animation_time * 2.3 - distance * 0.09) * distance * 0.17, 29 + distance)
+	draw_polyline(_kite_tail, Color("b7ae90"), 1.2, true)
 	for index in [3, 7, 11, 15]:
-		var point := tail[index]
+		var point := _kite_tail[index]
 		var color := Color("c6b3ca") if index % 3 == 0 else Color("e5c591")
-		draw_colored_polygon(PackedVector2Array([point, point + Vector2(-5, -3), point + Vector2(-5, 3)]), color)
-		draw_colored_polygon(PackedVector2Array([point, point + Vector2(5, -3), point + Vector2(5, 3)]), color)
+		_paint_polygon(PackedVector2Array([point, point + Vector2(-5, -3), point + Vector2(-5, 3)]), color)
+		_paint_polygon(PackedVector2Array([point, point + Vector2(5, -3), point + Vector2(5, 3)]), color)
 	draw_set_transform(Vector2.ZERO)
 
 
@@ -103,7 +107,7 @@ func _draw_garden_bird() -> void:
 	_ellipse(Vector2.ZERO, Vector2(9, 6), Color("92b5b8"))
 	draw_circle(Vector2(7, -5), 5, Color("92b5b8"), true, -1, true)
 	draw_circle(Vector2(9, -6), 1, Color("536f7b"), true, -1, true)
-	draw_colored_polygon(PackedVector2Array([Vector2(11, -4), Vector2(17, -3), Vector2(11, -1)]), Color("d8bc7d"))
+	_paint_polygon(PackedVector2Array([Vector2(11, -4), Vector2(17, -3), Vector2(11, -1)]), Color("d8bc7d"))
 	var wing := sin(animation_time * 17) * 9 if flying else -2.0
 	draw_line(Vector2(-2, -1), Vector2(-7, wing - 3), Color("6f98a4"), 4, true)
 	draw_line(Vector2(-7, 1), Vector2(-15, -3), Color("6f98a4"), 3, true)
@@ -187,13 +191,34 @@ func _draw_penguin_body(flipper: float) -> void:
 		draw_line(Vector2(side * 9, -21), Vector2(side * 15, -9 - flipper), PENGUIN_COLOR, 4, true)
 		draw_circle(Vector2(side * 4, -25), 2, Color("eaf3f2"), true, -1, true)
 		draw_circle(Vector2(side * 4, -25), 0.8, Color("547481"), true, -1, true)
-	draw_colored_polygon(PackedVector2Array([Vector2(-3, -21), Vector2(3, -21), Vector2(0, -17)]), Color("d7bd93"))
+	_paint_polygon(PackedVector2Array([Vector2(-3, -21), Vector2(3, -21), Vector2(0, -17)]), Color("d7bd93"))
 
 
 func _ellipse(center: Vector2, radius: Vector2, color: Color) -> void:
 	# Рисунок использует текущую локальную трансформацию героя.
+	draw_colored_polygon(_ellipse_points(center, radius), color)
+
+
+static func _ellipse_points(center: Vector2, radius: Vector2) -> PackedVector2Array:
+	# Сохраняем прежние 20 вершин; масштабирование выполняет движок.
+	return Transform2D(Vector2(radius.x, 0), Vector2(0, radius.y), center) * _ellipse_circle
+
+
+static func _unit_circle() -> PackedVector2Array:
 	var points := PackedVector2Array()
 	for index in 20:
 		var angle := float(index) * TAU / 20
-		points.append(center + Vector2(cos(angle), sin(angle)) * radius)
-	draw_colored_polygon(points, color)
+		points.append(Vector2(cos(angle), sin(angle)))
+	return points
+
+
+func _can_batch_polygon(points: PackedVector2Array) -> bool:
+	return use_batched_polygons and (points.size() == 3 or points.size() == 4)
+
+
+func _paint_polygon(points: PackedVector2Array, color: Color) -> void:
+	# Те же вершины и цвет; простые выпуклые фигуры объединяются WebGL в пакет.
+	if _can_batch_polygon(points):
+		draw_primitive(points, PackedColorArray([color]), PackedVector2Array())
+	else:
+		draw_colored_polygon(points, color)

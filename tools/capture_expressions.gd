@@ -57,6 +57,7 @@ func _capture() -> void:
 	sheet.queue_free()
 	await process_frame
 	var app := load("res://scenes/app.tscn").instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = ""
 	app.editor_recovery_path = ""
 	root.add_child(app)

@@ -18,6 +18,7 @@ func _run() -> void:
 		await _test_variant(kind)
 	await _test_shelter()
 	await _test_round()
+	await _test_playfield_bounds()
 	# Аудиосервер завершает освобождение потоков удалённого раунда асинхронно.
 	await create_timer(0.3).timeout
 	print("Dog defeat checks: %d passed, %d failed" % [_checks - _failures, _failures])
@@ -120,6 +121,82 @@ func _test_round() -> void:
 	_check(_effects(game.actors).is_empty() and game.state == GameRound.RoundState.WON, "После эффектов победа остаётся окончательной")
 	game.queue_free()
 	await _settle()
+
+
+func _test_playfield_bounds() -> void:
+	var original_size := root.size
+	for window_size: Vector2i in [Vector2i(1280, 720), Vector2i(1600, 720), Vector2i(960, 720)]:
+		root.size = window_size
+		var level := LevelDefinition.new()
+		level.dog_positions = PackedVector2Array([
+			Vector2(650, 400), Vector2(750, 400), Vector2(850, 400),
+			Vector2(950, 400), Vector2(1050, 400), Vector2(1150, 400),
+		])
+		level.dog_kinds = PackedStringArray(["scout", "armored", "jumper", "scout", "armored", "jumper"])
+		var game := GAME_SCENE.instantiate() as GameRound
+		game.level = level
+		root.add_child(game)
+		var dogs: Array[DogTarget] = []
+		for actor in game.actors.get_children():
+			if actor is DogTarget:
+				actor.freeze = true
+				dogs.append(actor)
+		await _physics_settle()
+		var center := Vector2(640, 360)
+		var half_size := game.get_viewport_rect().size * 0.5
+		game.camera.zoom = Vector2(2, 2)
+		game.camera.position += Vector2(180, 120)
+		game.camera.offset = Vector2(6, -4)
+		await _physics_settle()
+		_check(game.dogs_left == 6, "Приближение и перемещение камеры не убивают цели: %s" % window_size)
+		var directions: Array[Vector2] = [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]
+		for index in directions.size():
+			var direction := directions[index]
+			var edge := center + direction * half_size
+			var dog := dogs[index]
+			dog.position = edge + direction * (DogTarget.RADIUS - 1.0)
+			await _physics_settle()
+			_check(is_instance_valid(dog) and not dog.is_destroyed, "Частично видимая собака остаётся жива: %s / %d" % [window_size, index])
+			dog.position = edge + direction * (DogTarget.RADIUS + 1.0)
+			if index == 3:
+				paused = true
+				await _physics_settle()
+				_check(is_instance_valid(dog) and not dog.is_destroyed, "Пауза останавливает проверку границ")
+				paused = false
+			if index == 2:
+				game.state = GameRound.RoundState.FLYING
+			await _physics_settle()
+			_check(not is_instance_valid(dog) and game.dogs_left == 5 - index, "Вылет за край засчитывает поражение один раз: %s / %d" % [window_size, index])
+		var house := HOUSE_SCENE.instantiate() as DogHouse
+		house.freeze = true
+		house.position = center + Vector2(half_size.x + DogTarget.RADIUS + 10.0, 0) - house.dog_offset()
+		game.actors.add_child(house)
+		dogs[4].enter_shelter(house)
+		await _physics_settle()
+		_check(not is_instance_valid(dogs[4]) and game.dogs_left == 1, "Вылет конуры поражает собаку со щитом внутри")
+		house.queue_free()
+		var last_dog := dogs[5]
+		last_dog.position = center + Vector2(half_size.x - 10.0, 0)
+		last_dog.impact_threshold = 100000.0
+		await _physics_settle()
+		last_dog.freeze = false
+		last_dog.sleeping = false
+		last_dog.gravity_scale = 0.0
+		last_dog.linear_velocity = Vector2(900, 0)
+		for frame in range(12):
+			await physics_frame
+		await process_frame
+		_check(not is_instance_valid(last_dog), "Реальное физическое движение за край уничтожает последнюю собаку")
+		_check(game.dogs_left == 0 and game.state == GameRound.RoundState.WON, "Вылет последней собаки завершает раунд победой")
+		game.queue_free()
+		await _settle()
+	root.size = original_size
+
+
+func _physics_settle() -> void:
+	await physics_frame
+	await physics_frame
+	await process_frame
 
 
 func _spawn_dog(world: Node2D, kind: StringName) -> DogTarget:

@@ -192,7 +192,7 @@ func _test_real_throw(enabled: bool) -> void:
 		await physics_frame
 		if game.state != GameRound.RoundState.FLYING:
 			break
-		if not used and game._flight_time >= 0.65:
+		if not used and game._flight_time >= 0.65 / Slingshot.FLIGHT_SPEED_SCALE:
 			used = true
 			game.use_ability()
 	_check(game.state == GameRound.RoundState.WON and game.level.shots - game.shots_left == 1, "Включение/отключение отклика сохраняет победу одним броском")

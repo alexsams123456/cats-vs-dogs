@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+	<meta name="theme-color" content="#fff6db">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<title>$GODOT_PROJECT_NAME</title>
+	<style>
+		* { box-sizing: border-box; }
+		html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; }
+		body { background: #fff6db; color: #493527; font-family: system-ui, sans-serif; touch-action: none; }
+		#game { position: fixed; inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+		#canvas { display: block; width: 100%; height: 100%; outline: none; }
+		#fps { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 6px); left: 50%; transform: translateX(-50%); padding: 4px 8px; border-radius: 6px; background: #27221dcc; color: #fff; font: 700 12px/1.2 system-ui, sans-serif; font-variant-numeric: tabular-nums; pointer-events: none; user-select: none; z-index: 1; }
+		.overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; padding: 24px; text-align: center; background: #fff6db; z-index: 2; }
+		.overlay[hidden] { display: none; }
+		#splash { width: min(72vw, 750px); max-height: 62vh; object-fit: contain; }
+		button { background: #317255; color: white; border: 0; border-radius: 18px; padding: 14px 36px; font: 700 20px system-ui, sans-serif; cursor: pointer; min-height: 48px; touch-action: manipulation; }
+		button:focus-visible { outline: 3px solid #ad6b23; outline-offset: 4px; }
+		progress { width: min(70vw, 400px); height: 16px; accent-color: #317255; }
+		#notice { max-width: 650px; margin: 0; line-height: 1.45; }
+		#rotate { z-index: 3; }
+		#rotate strong { font-size: 25px; }
+	</style>
+	$GODOT_HEAD_INCLUDE
+</head>
+<body>
+	<div id="game"><canvas id="canvas" tabindex="0">Браузер не поддерживает игровое поле.</canvas></div>
+	<div id="fps" hidden>FPS: —</div>
+	<div id="status" class="overlay">
+		<img id="splash" src="$GODOT_SPLASH" alt="Кошки против собак">
+		<button id="start" type="button">Играть</button>
+		<progress id="progress" hidden aria-label="Загрузка игры"></progress>
+		<p id="notice" role="status">Прогресс сохраняется в этом браузере.</p>
+		<button id="retry" type="button" hidden>Попробовать ещё раз</button>
+	</div>
+	<div id="rotate" class="overlay" hidden><strong>Поверните телефон</strong><span>Играть удобнее горизонтально ↔</span></div>
+	<noscript>Для игры включите JavaScript в настройках Safari.</noscript>
+	<script src="$GODOT_URL"></script>
+	<script>
+		// Keep Firefox DevTools available: Godot cancels canvas keyboard events.
+		function preserveDevToolsKey(event) {
+			if (event.key === 'F12' || event.code === 'F12') event.stopImmediatePropagation();
+		}
+		window.addEventListener('keydown', preserveDevToolsKey, { capture: true });
+		window.addEventListener('keyup', preserveDevToolsKey, { capture: true });
+		const touchDevice = navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+		function updateOrientation() {
+			document.getElementById('rotate').hidden = !touchDevice || innerWidth >= innerHeight;
+		}
+		window.addEventListener('resize', updateOrientation);
+		if (window.visualViewport) window.visualViewport.addEventListener('resize', updateOrientation);
+		updateOrientation();
+		const config = $GODOT_CONFIG;
+		const engine = new Engine(config);
+		const canvas = document.getElementById('canvas');
+		// Desktop: request the GPU best suited to rendering. The browser decides.
+		const getCanvasContext = canvas.getContext.bind(canvas);
+		canvas.getContext = (type, attributes) => getCanvasContext(type,
+			(type === 'webgl2' || type === 'webgl') && !touchDevice
+				? { ...attributes, powerPreference: 'high-performance' }
+				: attributes);
+		const status = document.getElementById('status');
+		const start = document.getElementById('start');
+		const progress = document.getElementById('progress');
+		const notice = document.getElementById('notice');
+		const retry = document.getElementById('retry');
+		retry.addEventListener('click', () => location.reload());
+		function fail(error) {
+			console.error(error);
+			document.getElementById('fps').hidden = true;
+			status.hidden = false;
+			progress.hidden = true;
+			start.hidden = true;
+			notice.textContent = 'Не удалось запустить игру. Проверьте соединение и попробуйте обновить Safari. ' + (error.message || error);
+			retry.hidden = false;
+		}
+		start.addEventListener('click', async () => {
+			start.hidden = true;
+			progress.hidden = false;
+			notice.textContent = 'Загружаем двор… Первый запуск может занять немного времени.';
+			try {
+				const missing = Engine.getMissingFeatures({ threads: $GODOT_THREADS_ENABLED });
+				if (missing.length) throw new Error('Браузеру требуются: ' + missing.join(', '));
+				await engine.startGame({
+					canvas,
+					onProgress(current, total) {
+						if (total > 0) { progress.max = total; progress.value = current; }
+						else progress.removeAttribute('value');
+					},
+					onExit(code) { fail(new Error('Игра завершилась (код ' + code + ').')); }
+				});
+				status.hidden = true;
+				canvas.focus();
+			} catch (error) { fail(error); }
+		}, { once: true });
+	</script>
+</body>
+</html>

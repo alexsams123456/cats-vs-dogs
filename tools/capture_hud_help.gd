@@ -207,7 +207,11 @@ func _check_footer_layout(hud: GameHUD) -> void:
 	var card := hud._current_card.get_global_rect()
 	for control: Control in [hud._current_card, hud._ability_status, hud._ability_button]:
 		_check(root.get_visible_rect().encloses(control.get_global_rect()), "The current cat and its translated action status stay on screen")
-	_check(card.encloses(hud._ability_status.get_global_rect()) and card.encloses(hud._ability_button.get_global_rect()), "The action and translated status stay inside the current-cat card")
+	_check(card.encloses(hud._ability_status.get_global_rect()), "The translated status stays inside the current-cat card")
+	var action := hud._ability_button.get_global_rect()
+	var bounds := root.get_visible_rect()
+	_check(action.position.x > bounds.get_center().x and is_equal_approx(action.end.x, bounds.end.x - hud._margin.get_theme_constant("margin_right")), "Ability stays at the right screen edge in every locale")
+	_check(not action.intersects(card) and not action.intersects(hud._hint.get_global_rect()), "Ability does not overlap the current cat or tutorial")
 	_check(not hud._ability_status.get_global_rect().intersects(hud._ability_button.get_global_rect()), "The translated status and ability action do not overlap")
 
 

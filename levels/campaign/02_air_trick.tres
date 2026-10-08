@@ -12,6 +12,6 @@ block_materials = PackedStringArray("wood", "wood", "wood", "wood", "wood", "woo
 dog_house_materials = null
 dog_house_types = null
 cat_sequence = PackedStringArray("splitter", "classic", "homing", "classic")
-dog_kinds = PackedStringArray("scout", "scout", "scout")
+dog_kinds = PackedStringArray("scout", "jumper", "scout")
 tutorial = &"ability"
 par_shots = 2

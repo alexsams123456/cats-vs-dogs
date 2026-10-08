@@ -61,7 +61,7 @@ func _round(index: int) -> void:
 	var captured := false
 	for tick in 1800:
 		await physics_frame
-		if not activated and game._flight_time >= 0.65 and game.state == GameRound.RoundState.FLYING:
+		if not activated and game._flight_time >= 0.65 / Slingshot.FLIGHT_SPEED_SCALE and game.state == GameRound.RoundState.FLYING:
 			activated = true
 			if touch:
 				var center := game.hud._ability_button.get_global_rect().get_center()

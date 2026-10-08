@@ -12,6 +12,8 @@ signal camera_reset_requested
 const INK := Color("254b4b")
 const CREAM := Color("fff7df")
 const TEAL := Color("387c73")
+const VICTORY_DELAY := 0.65
+const RESULT_FADE_DURATION := 0.3
 
 enum AbilityState { BEFORE_LAUNCH, READY, USED, CONTACTED, AUTOMATIC, WAITING }
 
@@ -21,6 +23,8 @@ var _level_label: Label
 var _stats: Label
 var _hint: Label
 var _overlay: ColorRect
+var _result_card: PanelContainer
+var _result_tween: Tween
 var _result_title: Label
 var _result_detail: Label
 var _reward_notice: Label
@@ -118,10 +122,13 @@ func _ready() -> void:
 
 func _build_footer(column: VBoxContainer) -> void:
 	var footer := HBoxContainer.new()
+	# Keep the ability within reach of the right thumb in every locale.
+	footer.layout_direction = Control.LAYOUT_DIRECTION_LTR
 	footer.add_theme_constant_override("separation", 20)
 	footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(footer)
 	_current_card = PanelContainer.new()
+	_current_card.layout_direction = Control.LAYOUT_DIRECTION_LOCALE
 	_current_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_current_card.size_flags_vertical = Control.SIZE_SHRINK_END
 	var style := _style(Color("fff7e8"))
@@ -150,6 +157,12 @@ func _build_footer(column: VBoxContainer) -> void:
 	_ability_status = _label("", 16)
 	_ability_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	identity.add_child(_ability_status)
+	_hint = _label("", 19)
+	_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	footer.add_child(_hint)
 	_ability_button = _button("", ability_requested.emit)
 	_ability_button.custom_minimum_size = Vector2(220, 56)
 	_ability_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -157,13 +170,7 @@ func _build_footer(column: VBoxContainer) -> void:
 	_ability_button.add_theme_stylebox_override("hover", _style(Color("ffce78")))
 	_ability_button.add_theme_color_override("font_color", INK)
 	_ability_button.add_theme_color_override("font_hover_color", INK)
-	row.add_child(_ability_button)
-	_hint = _label("", 19)
-	_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	footer.add_child(_hint)
+	footer.add_child(_ability_button)
 
 
 func _input(event: InputEvent) -> void:
@@ -253,13 +260,7 @@ func set_tutorial_hint(message: String) -> void:
 	_tutorial_hint = message
 	if _result_shown:
 		return
-	if _touch_ui and message == "Шаг 2/2. Нажми кнопку способности или E в полёте, до удара.":
-		message = "Шаг 2/2. Нажми кнопку способности в полёте, до удара."
 	_hint.text = tr(message) if not message.is_empty() else _default_hint
-	if not _touch_ui and message == "Шаг 2/2. Нажми кнопку способности или E в полёте, до удара.":
-		var events := InputMap.action_get_events("ability")
-		if not events.is_empty() and events[0] is InputEventKey and events[0].physical_keycode != KEY_E:
-			_hint.text = tr("Способность: %s — в полёте, до удара.") % OS.get_keycode_string(events[0].physical_keycode)
 
 
 func refresh_desktop_help() -> void:
@@ -279,6 +280,7 @@ func update_status(level_title: String, cats: int, dogs: int, flying: bool) -> v
 
 
 func show_pause(value: bool) -> void:
+	_reset_result_transition()
 	_reward_notice.hide()
 	_result_celebration.stop()
 	_overlay_sound.show()
@@ -297,7 +299,8 @@ func set_result_cast(kinds: PackedStringArray) -> void:
 	_result_cast = kinds.duplicate()
 
 
-func show_result(won: bool, shots_used: int = 0, stars: int = 0) -> void:
+func show_result(won: bool, shots_used: int = 0, stars: int = 0, delay: float = 0.0) -> void:
+	_reset_result_transition()
 	_reward_notice.hide()
 	_result_shown = true
 	_overlay.show()
@@ -331,6 +334,31 @@ func show_result(won: bool, shots_used: int = 0, stars: int = 0) -> void:
 	_camera_button.hide()
 	_camera_hint.hide()
 	_current_card.hide()
+	_animate_result(delay)
+
+
+func _reset_result_transition() -> void:
+	if _result_tween != null:
+		_result_tween.kill()
+		_result_tween = null
+	_overlay.modulate.a = 1.0
+	_result_card.scale = Vector2.ONE
+
+
+func _animate_result(delay: float) -> void:
+	_overlay.modulate.a = 0.0
+	_result_card.scale = Vector2.ONE * 0.94
+	if delay > 0.0:
+		_overlay.hide()
+	_result_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_STOP)
+	if delay > 0.0:
+		_result_tween.tween_interval(delay)
+	_result_tween.tween_callback(func() -> void:
+		_result_card.pivot_offset = _result_card.size * 0.5
+		_overlay.show()
+	)
+	_result_tween.tween_property(_overlay, "modulate:a", 1.0, RESULT_FADE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_result_tween.parallel().tween_property(_result_card, "scale", Vector2.ONE, RESULT_FADE_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 func set_touch_ui(value: bool) -> void:
@@ -351,9 +379,9 @@ func _refresh_input_hints() -> void:
 	if not events.is_empty() and events[0] is InputEventKey:
 		key_name = OS.get_keycode_string(events[0].physical_keycode)
 	_ability_button.text = tr(_cat_definition.ability_action) + ("" if _touch_ui else "  ·  " + key_name)
-	var hint := tr("Нажми кнопку способности в полёте, до удара.") if _touch_ui and active else tr(_cat_definition.ability_hint)
-	if not _touch_ui and active and key_name != "E":
-		hint = tr("Способность: %s — в полёте, до удара.") % key_name
+	var hint := tr(_cat_definition.ability_hint)
+	if active:
+		hint = tr("Коснись игрового поля в полёте, до удара.") if _touch_ui else tr("Кликни по игровому полю или нажми %s в полёте, до удара.") % key_name
 	_power_hint.text = tr(_cat_definition.display_name) + ": " + hint
 
 
@@ -434,6 +462,8 @@ func _build_overlay() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_overlay.add_child(center)
 	var card := PanelContainer.new()
+	_result_card = card
+	card.resized.connect(func() -> void: card.pivot_offset = card.size * 0.5)
 	card.custom_minimum_size = Vector2(600, 300)
 	var style := _style(CREAM)
 	style.content_margin_left = 36

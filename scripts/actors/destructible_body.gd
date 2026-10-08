@@ -78,6 +78,9 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		# by a heavy shelter without giving that shelter a large final velocity.
 		if not previous_impulses.has(collider_id):
 			impact_speed = maxf(impact_speed, contact.incoming_speed)
+		# Slower flight must not also weaken the cat against material thresholds.
+		if contact.collider is CatProjectile:
+			impact_speed /= contact.collider.flight_speed_scale
 		# A frozen target cannot run its own contact integration.
 		var frozen_dog := contact.collider as DogTarget
 		if frozen_dog != null and frozen_dog.frost_time_left > 0.0:

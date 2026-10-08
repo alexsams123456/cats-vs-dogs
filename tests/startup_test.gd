@@ -23,6 +23,7 @@ func _run() -> void:
 func _test_size(dimensions: Vector2i) -> void:
 	root.size = dimensions
 	var app := STARTUP_SCENE.instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = ""
 	app.editor_recovery_path = ""
 	root.add_child(app)

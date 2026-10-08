@@ -26,7 +26,7 @@ func _ready() -> void:
 	text = tr("ПК")
 	tooltip_text = tr("Управление и экран")
 	custom_minimum_size = Vector2(56, 56)
-	visible = not OS.has_feature("mobile")
+	visible = not OS.has_feature("mobile") and not (OS.has_feature("web") and DisplayServer.is_touchscreen_available())
 	pressed.connect(open_settings)
 	dialog = AcceptDialog.new()
 	dialog.title = tr("Настройки ПК")

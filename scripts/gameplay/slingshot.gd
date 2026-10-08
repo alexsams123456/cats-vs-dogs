@@ -6,7 +6,9 @@ signal launched(projectile: CatProjectile)
 signal tension_started
 
 @export var max_pull: float = 105.0
-@export var launch_speed: float = 10.0
+@export var launch_speed: float = 5.0
+
+const FLIGHT_SPEED_SCALE: float = 0.5
 
 const GRAB_RADIUS: float = 54.0
 const MIN_PULL: float = 10.0
@@ -24,6 +26,7 @@ var _tension_reported: bool = false
 func load_projectile(projectile: CatProjectile) -> void:
 	cancel_drag()
 	loaded_projectile = projectile
+	projectile.set_flight_speed_scale(FLIGHT_SPEED_SCALE)
 	projectile.freeze = true
 	projectile.linear_velocity = Vector2.ZERO
 	projectile.angular_velocity = 0.0
@@ -158,9 +161,9 @@ func _draw() -> void:
 	draw_circle(Vector2(28, -8), 5.0, Color("deb66d"))
 	if is_dragging and _pull.length() >= MIN_PULL:
 		var velocity := -_pull * launch_speed
-		var gravity := float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
+		var gravity := float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0)) * loaded_projectile.gravity_scale
 		for index in range(1, 20):
-			var time := index * 0.065
+			var time := index * 0.065 / loaded_projectile.flight_speed_scale
 			var point := _pull + velocity * time + Vector2(0, 0.5 * gravity * time * time)
 			point += loaded_projectile.trajectory_offset(time, velocity)
 			var opacity := 0.75 * (1.0 - float(index) / 24.0)

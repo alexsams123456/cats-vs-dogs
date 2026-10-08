@@ -20,6 +20,11 @@ var showcase_visible: bool = true:
 			_motion.queue_redraw()
 
 var visual_time: float = 0.0
+var use_cached_art: bool = OS.has_feature("web")
+var _cached_art: Texture2D
+var _cached_size := Vector2i.ZERO
+var _cached_showcase: bool = true
+var _cache_pending: bool = false
 var _motion: Control
 var _sun_face: SunFace
 var _frame_time: float = 0.0
@@ -198,6 +203,13 @@ func hero_at_position(viewport_point: Vector2) -> int:
 func _draw() -> void:
 	if size.y <= 0.0:
 		return
+	if use_cached_art:
+		if _cached_art != null and _cached_size == Vector2i(size.ceil()) and _cached_showcase == showcase_visible:
+			draw_texture_rect(_cached_art, Rect2(Vector2.ZERO, size), false)
+			return
+		if not _cache_pending:
+			_cache_pending = true
+			_cache_static_art.call_deferred()
 	var scale_factor: float = size.y / 720.0
 	var width: float = size.x / scale_factor
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * scale_factor)
@@ -210,6 +222,38 @@ func _draw() -> void:
 	if showcase_visible:
 		_draw_showcase(width)
 	draw_set_transform(Vector2.ZERO)
+
+
+func _cache_static_art() -> void:
+	var dimensions := Vector2i(size.ceil())
+	if dimensions.x <= 0 or dimensions.y <= 0 or dimensions.x > 2048 or dimensions.y > 2048:
+		_cache_pending = false
+		return
+	var viewport := SubViewport.new()
+	viewport.size = dimensions * 2
+	viewport.disable_3d = true
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	var drawing: MenuBackdrop = get_script().new()
+	drawing.use_cached_art = false
+	drawing.showcase_visible = showcase_visible
+	var snapshot_showcase := showcase_visible
+	viewport.add_child(drawing)
+	add_child(viewport)
+	viewport.canvas_transform = Transform2D(0.0, Vector2.ZERO).scaled(Vector2.ONE * 2.0)
+	drawing.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	drawing.size = Vector2(dimensions)
+	drawing.set_process(false)
+	drawing._motion.hide()
+	drawing._sun_face.hide()
+	await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	# The temporary viewport can be released after copying its completed frame.
+	_cached_art = ImageTexture.create_from_image(viewport.get_texture().get_image())
+	_cached_size = dimensions
+	_cached_showcase = snapshot_showcase
+	viewport.queue_free()
+	_cache_pending = false
+	queue_redraw()
 
 
 func _draw_sky(width: float) -> void:

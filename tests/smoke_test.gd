@@ -105,7 +105,7 @@ func _check_full_field_throw() -> void:
 	sling.load_projectile(cat)
 	_check(sling.launch_from_pull(Vector2(-1, 1) * sling.max_pull), "Full pull launches an ordinary cat without an ability")
 	var crossed_field := false
-	for tick in 180:
+	for tick in 360:
 		await physics_frame
 		if cat.position.y + CatProjectile.RADIUS >= 620.0:
 			break

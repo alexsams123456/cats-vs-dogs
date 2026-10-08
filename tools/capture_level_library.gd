@@ -12,6 +12,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var app := preload("res://scenes/app.tscn").instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = ""
 	app.editor_recovery_path = ""
 	root.add_child(app)
@@ -43,7 +44,7 @@ func _run() -> void:
 	var ability := false
 	for tick in 1800:
 		await physics_frame
-		if not ability and app.game._flight_time >= 0.65:
+		if not ability and app.game._flight_time >= 0.65 / Slingshot.FLIGHT_SPEED_SCALE:
 			ability = true
 			var key := InputEventKey.new()
 			key.physical_keycode = KEY_E

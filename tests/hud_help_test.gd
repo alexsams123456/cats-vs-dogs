@@ -89,7 +89,7 @@ func _test_buttons(hud: GameHUD) -> void:
 func _test_input_hints(hud: GameHUD) -> void:
 	hud.set_loadout(CharacterCatalog.CATS[0], CharacterCatalog.DOGS[0])
 	hud.set_touch_ui(true)
-	hud.set_tutorial_hint("Шаг 2/2. Нажми кнопку способности или E в полёте, до удара.")
+	hud.set_tutorial_hint("Шаг 2/2. Нажми на игровое поле в полёте, до удара.")
 	_check(not hud._ability_button.text.contains("E") and not hud._power_hint.text.contains("E") and not hud._hint.text.contains("E"), "Touch mode removes keyboard advice from the action, power and lesson")
 	_check(hud._camera_hint.text.begins_with("Два пальца"), "Touch mode teaches pinch and pan")
 	var emulated := InputEventMouseButton.new()
@@ -102,7 +102,7 @@ func _test_input_hints(hud: GameHUD) -> void:
 	keyboard.pressed = true
 	keyboard.keycode = KEY_E
 	hud._input(keyboard)
-	_check(hud._ability_button.text.ends_with("E") and hud._hint.text.contains("или E"), "A physical keyboard restores the shortcut and full lesson")
+	_check(hud._ability_button.text.ends_with("E") and hud._power_hint.text.contains("нажми E") and hud._hint.text.contains("игровое поле"), "A physical keyboard restores the shortcut while the lesson teaches screen activation")
 	_check(hud._camera_hint.text.begins_with("Колесо мыши"), "Desktop mode explains the mouse wheel")
 	hud.set_touch_ui(true)
 	hud.set_loadout(CharacterCatalog.find_cat(&"zigzag"), CharacterCatalog.DOGS[0])
@@ -121,6 +121,9 @@ func _test_layouts(hud: GameHUD) -> void:
 			var bounds := root.get_visible_rect()
 			for control: Control in [hud._level_label, hud._stats, hud._camera_button, hud._help_button, hud._pause_button, hud._current_portrait, hud._current_name, hud._ability_status, hud._ability_button]:
 				_check(bounds.encloses(control.get_global_rect()), "%s %s: compact control stays on screen" % [viewport_size, locale])
+			var action := hud._ability_button.get_global_rect()
+			_check(action.position.x > bounds.get_center().x and is_equal_approx(action.end.x, bounds.end.x - hud._margin.get_theme_constant("margin_right")), "%s %s: ability stays at the right screen edge" % [viewport_size, locale])
+			_check(not action.intersects(hud._current_card.get_global_rect()) and not action.intersects(hud._hint.get_global_rect()), "%s %s: ability does not overlap the cat or lesson" % [viewport_size, locale])
 			_check(not hud._hint.is_visible_in_tree() or hud._hint.text.is_empty(), "%s %s: campaign has no permanent generic instruction" % [viewport_size, locale])
 			await _click(hud._help_button)
 			await _settle()

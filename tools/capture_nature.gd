@@ -24,6 +24,7 @@ func _capture() -> void:
 		quit(1)
 		return
 	var app := APP_SCENE.instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.editor_recovery_path = ""
 	app.profile_path = ""
 	root.add_child(app)

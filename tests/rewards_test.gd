@@ -91,6 +91,7 @@ func _write(data: Dictionary) -> void:
 
 func _test_app() -> void:
 	var app := APP_SCENE.instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = ""
 	app.editor_recovery_path = ""
 	root.add_child(app)

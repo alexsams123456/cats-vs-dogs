@@ -2,9 +2,21 @@ extends Node2D
 ## A hand-shaped tree whose cached drawing sways through its parent's clock.
 
 var warm_foliage: bool = false
+var use_baked_art: bool = OS.has_feature("web")
+var _baked_art: Texture2D
+
+
+func _ready() -> void:
+	if use_baked_art:
+		var path := "res://assets/scenery/tree_%s.png" % ("warm" if warm_foliage else "cool")
+		if ResourceLoader.exists(path):
+			_baked_art = load(path) as Texture2D
 
 
 func _draw() -> void:
+	if _baked_art != null:
+		draw_texture_rect(_baked_art, Rect2(-200, -320, 400, 340), false)
+		return
 	var shade := Color("3d6c56") if not warm_foliage else Color("497155")
 	var middle := Color("5d8559") if not warm_foliage else Color("71915d")
 	var light := Color("88a66b") if not warm_foliage else Color("a3b779")

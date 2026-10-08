@@ -24,6 +24,7 @@ var visual_time: float = 0.0
 var expression: StringName = &"idle"
 var meow_count: int = 0
 var projectile_scale: float = 1.0
+var flight_speed_scale: float = 1.0
 var _visual_phase: float = 0.0
 var _aiming: bool = false
 var _has_contacted: bool = false
@@ -43,6 +44,9 @@ var impact_motion := preload("res://scripts/actors/impact_motion.gd").new()
 
 
 func _ready() -> void:
+	if HeroVisual.use_atlas and definition != null:
+		HeroVisual.ATLAS.prepare(definition)
+	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	set_physics_process(false)
 	_visual_phase = float(get_instance_id() % 997) * 0.061
 	_speech_style = StyleBoxFlat.new()
@@ -53,6 +57,8 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	var previous_time := visual_time
+	var previous_expression := expression
 	visual_time += delta
 	_mouth_time_left = maxf(0.0, _mouth_time_left - delta)
 	_hit_time_left = maxf(0.0, _hit_time_left - delta)
@@ -61,7 +67,8 @@ func _process(delta: float) -> void:
 		if meow_count < MAX_MEOWS and _air_voice_time >= MEOW_INTERVAL * meow_count:
 			_request_meow()
 	_refresh_expression()
-	queue_redraw()
+	if expression != previous_expression or HeroVisual.needs_redraw(previous_time, visual_time):
+		queue_redraw()
 
 
 func set_aiming(value: bool) -> void:
@@ -70,7 +77,16 @@ func set_aiming(value: bool) -> void:
 	queue_redraw()
 
 
+func set_flight_speed_scale(value: float) -> void:
+	# Scaling velocity by s needs gravity scaled by s² to keep the same arc.
+	gravity_scale *= (value / flight_speed_scale) ** 2
+	flight_speed_scale = value
+
+
 func launch(velocity: Vector2) -> void:
+	# Aiming follows the pointer directly; flight is smoothed between physics ticks.
+	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_ON
+	reset_physics_interpolation()
 	_aiming = false
 	was_launched = true
 	freeze = false
@@ -156,7 +172,7 @@ func trajectory_offset(time: float, initial_velocity: Vector2) -> Vector2:
 	if _kind() != &"zigzag":
 		return Vector2.ZERO
 	# sin(a) * sin(b) = (cos(a-b) - cos(a+b)) / 2; integrate twice.
-	var elapsed := maxf(time, 0.0)
+	var elapsed := maxf(time, 0.0) * flight_speed_scale
 	var powered_time := minf(elapsed, wave_duration)
 	var low_frequency := TAU * wave_frequency - PI / wave_duration
 	var high_frequency := TAU * wave_frequency + PI / wave_duration
@@ -182,7 +198,7 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		for index in state.get_contact_count():
 			var dog := state.get_contact_collider_object(index) as DogTarget
 			if dog != null and dog.frost_time_left > 0.0:
-				var impact := maxf(ability.last_speed, state.get_contact_impulse(index).length() / mass)
+				var impact := maxf(ability.last_speed, state.get_contact_impulse(index).length() / mass) / flight_speed_scale
 				dog.receive_hit(impact)
 		if not _has_contacted:
 			_has_contacted = true
@@ -198,12 +214,12 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		# A temporary transverse force changes the real trajectory, never the transform.
 		var envelope := sin(PI * _flight_age / wave_duration)
 		var wave := sin(_flight_age * TAU * wave_frequency) * envelope
-		state.apply_central_force(_wave_normal * wave * wave_acceleration * mass)
+		state.apply_central_force(_wave_normal * wave * wave_acceleration * mass * flight_speed_scale ** 2)
 	ability.integrate(state)
 
 
 func _physics_process(delta: float) -> void:
-	_flight_age += delta
+	_flight_age += delta * flight_speed_scale
 	if _flight_age < wave_duration and not _wave_finished:
 		_trail_points.append(global_position)
 		_trail_times.append(_flight_age)

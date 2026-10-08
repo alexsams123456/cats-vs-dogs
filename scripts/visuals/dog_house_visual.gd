@@ -7,6 +7,15 @@ const SIGN_COLOR := Color("fff1ca")
 
 
 static func paint(canvas: CanvasItem, material_id: StringName, damage: float = 0.0, house_type: StringName = &"classic") -> void:
+	if StructureArtCache.enabled:
+		var size := DogHouseTypes.get_definition(house_type).size
+		var key := "house:%s:%s:%s" % [house_type, material_id, damage]
+		if StructureArtCache.paint(canvas, key, Rect2(-size * 0.5, size), paint_uncached.bind(material_id, damage, house_type)):
+			return
+	paint_uncached(canvas, material_id, damage, house_type)
+
+
+static func paint_uncached(canvas: CanvasItem, material_id: StringName, damage: float = 0.0, house_type: StringName = &"classic") -> void:
 	var material := BlockMaterials.get_definition(material_id)
 	match house_type:
 		&"barrel":

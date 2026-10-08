@@ -103,10 +103,26 @@ try {
     [void](Invoke-GodotCheck -Name 'import' -Arguments $ImportArguments)
 
     Write-Host 'Running smoke tests...'
+    $BackdropArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'backdrop-cache.log'), '--script', 'res://tests/backdrop_cache_test.gd')
+    Write-Host (Invoke-GodotCheck -Name 'backdrop-cache' -Arguments $BackdropArguments)
+    $SceneryArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'scenery-cache.log'), '--script', 'res://tests/scenery_cache_test.gd')
+    Write-Host (Invoke-GodotCheck -Name 'scenery-cache' -Arguments $SceneryArguments)
+    $BackgroundGeometryArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'background-geometry.log'), '--script', 'res://tests/background_geometry_test.gd')
+    Write-Host (Invoke-GodotCheck -Name 'background-geometry' -Arguments $BackgroundGeometryArguments)
+    $StructureCacheArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'structure-art-cache.log'), '--script', 'res://tests/structure_art_cache_test.gd')
+    Write-Host (Invoke-GodotCheck -Name 'structure-art-cache' -Arguments $StructureCacheArguments)
+    $WebPolygonArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'web-polygon.log'), '--script', 'res://tests/web_polygon_test.gd')
+    Write-Host (Invoke-GodotCheck -Name 'web-polygon' -Arguments $WebPolygonArguments)
+    $HeroAtlasArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'hero-atlas.log'), '--script', 'res://tests/hero_atlas_test.gd')
+    Write-Host (Invoke-GodotCheck -Name 'hero-atlas' -Arguments $HeroAtlasArguments)
+    $InterpolationArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'render-interpolation.log'), '--script', 'res://tests/render_interpolation_test.gd')
+    Write-Host (Invoke-GodotCheck -Name 'render-interpolation' -Arguments $InterpolationArguments)
     $SmokeArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'smoke.log'), '--script', 'res://tests/smoke_test.gd')
     $SmokeOutput = Invoke-GodotCheck -Name 'smoke' -Arguments $SmokeArguments
     Write-Host $SmokeOutput
     Write-Host 'Running camera gesture tests...'
+    $FlightArguments = @('--headless', '--fixed-fps', '60', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'flight-speed.log'), '--script', 'res://tests/flight_speed_test.gd')
+    Write-Host (Invoke-GodotCheck -Name 'flight-speed' -Arguments $FlightArguments)
     $CameraGesturesArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'camera-gestures.log'), '--script', 'res://tests/camera_gestures_test.gd')
     $CameraGesturesOutput = Invoke-GodotCheck -Name 'camera-gestures' -Arguments $CameraGesturesArguments
     Write-Host $CameraGesturesOutput
@@ -115,10 +131,14 @@ try {
     $RosterOutput = Invoke-GodotCheck -Name 'roster' -Arguments $RosterArguments
     Write-Host $RosterOutput
     Write-Host 'Running ten cat ability checks...'
+    $ScreenAbilityArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'screen-ability-input.log'), '--script', 'res://tests/screen_ability_input_test.gd')
+    Write-Host (Invoke-GodotCheck -Name 'screen-ability-input' -Arguments $ScreenAbilityArguments)
     $CatAbilitiesArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'cat-abilities.log'), '--script', 'res://tests/cat_abilities_test.gd')
     $CatAbilitiesOutput = Invoke-GodotCheck -Name 'cat-abilities' -Arguments $CatAbilitiesArguments
     Write-Host $CatAbilitiesOutput
     Write-Host 'Running animation and audio checks...'
+    $PatrolArguments = @('--headless', '--fixed-fps', '60', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'dog-patrol.log'), '--script', 'res://tests/dog_patrol_test.gd')
+    Write-Host (Invoke-GodotCheck -Name 'dog-patrol' -Arguments $PatrolArguments)
     $AnimationArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'animation.log'), '--script', 'res://tests/animation_test.gd')
     $AnimationOutput = Invoke-GodotCheck -Name 'animation' -Arguments $AnimationArguments
     Write-Host $AnimationOutput
@@ -161,6 +181,9 @@ try {
         $SuiteArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath "$Suite.log"), '--script', "res://tests/${Suite}_test.gd")
         Write-Host (Invoke-GodotCheck -Name $Suite -Arguments $SuiteArguments)
     }
+    Write-Host 'Running screen transition checks...'
+    $TransitionArguments = @('--headless', '--fixed-fps', '60', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'screen-transition.log'), '--script', 'res://tests/screen_transition_test.gd')
+    Write-Host (Invoke-GodotCheck -Name 'screen-transition' -Arguments $TransitionArguments)
     Write-Host 'Replaying campaign physics routes...'
     $RoutesArguments = @('--headless', '--fixed-fps', '60', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'campaign-routes.log'), '--script', 'res://tools/solve_campaign.gd')
     Write-Host (Invoke-GodotCheck -Name 'campaign-routes' -Arguments $RoutesArguments)

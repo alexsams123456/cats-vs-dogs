@@ -21,6 +21,7 @@ func _run() -> void:
 	DirAccess.make_dir_recursive_absolute("res://.artifacts")
 	AudioServer.set_bus_mute(0, true)
 	var app := APP_SCENE.instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = ""
 	app.editor_recovery_path = ""
 	root.add_child(app)

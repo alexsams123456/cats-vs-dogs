@@ -78,6 +78,7 @@ func _test_profile() -> void:
 func _test_app() -> void:
 	var initial_quit_on_go_back := quit_on_go_back
 	var app := APP_SCENE.instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = _save_path
 	app.editor_recovery_path = ""
 	root.add_child(app)
@@ -174,6 +175,7 @@ func _test_app() -> void:
 	await _settle()
 	_check(quit_on_go_back == initial_quit_on_go_back, "Removing the application restores native Back policy")
 	app = APP_SCENE.instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = _save_path
 	app.editor_recovery_path = ""
 	root.add_child(app)

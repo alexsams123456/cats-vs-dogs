@@ -26,6 +26,7 @@ func _run() -> void:
 
 func _test_menu() -> void:
 	var app := APP_SCENE.instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.editor_recovery_path = ""
 	app.profile_path = ""
 	root.add_child(app)

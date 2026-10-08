@@ -141,6 +141,7 @@ func _replay(level_id: String, level: LevelDefinition, route: Array, attempt: in
 		shot[1] += variation
 		if shot[2] >= 0.0:
 			shot[2] += variation * 0.05
+			shot[2] /= Slingshot.FLIGHT_SPEED_SCALE
 		_check(_launch(game, Vector2(shot[0], shot[1])), level.title + ": настоящий запуск из рогатки")
 		used += 1
 		var activated := false

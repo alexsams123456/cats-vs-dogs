@@ -198,7 +198,7 @@ func _test_finished_overlay(game: GameRound, camera: GameCamera) -> void:
 	for dog in get_nodes_in_group("targets"):
 		dog.destroy()
 	await _settle()
-	_check(game.state == GameRound.RoundState.WON and game.hud._overlay.visible, "Victory displays the result overlay")
+	_check(game.state == GameRound.RoundState.WON and not game.hud._overlay.visible, "Victory waits before displaying the result overlay")
 	_wheel(Vector2(150, 250), MOUSE_BUTTON_WHEEL_UP)
 	_check(camera.zoom.is_equal_approx(Vector2.ONE), "Result overlay blocks wheel input outside its card")
 	_touch(Vector2(80, 300), 20, true)
@@ -208,6 +208,8 @@ func _test_finished_overlay(game: GameRound, camera: GameCamera) -> void:
 	_check(camera.zoom.is_equal_approx(Vector2.ONE) and camera.position.is_equal_approx(HOME), "Result overlay blocks new camera gestures")
 	_touch(Vector2(30, 300), 20, false)
 	_touch(Vector2(330, 300), 21, false)
+	await create_timer(GameHUD.VICTORY_DELAY + GameHUD.RESULT_FADE_DURATION).timeout
+	_check(game.hud._overlay.visible, "Victory displays the result after its short delay")
 
 
 func _test_shot_after_zoom(touch: bool) -> void:

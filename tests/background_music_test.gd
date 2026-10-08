@@ -1,4 +1,4 @@
-﻿extends SceneTree
+extends SceneTree
 ## Один музыкальный фон сопровождает все экраны, сохраняет фразу и подчиняется общему звуку.
 
 const MAIN_SCENE := preload("res://scenes/main.tscn")
@@ -244,6 +244,7 @@ func _test_focus(screen: Node, music: BackgroundMusic, description: String) -> v
 
 func _new_app() -> GameApp:
 	var app := APP_SCENE.instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = _save_path
 	app.editor_recovery_path = ""
 	return app

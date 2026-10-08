@@ -44,6 +44,7 @@ var _aim_gesture: AimGestureVisual
 @onready var hud: GameHUD = $HUD
 @onready var cat_queue: CatQueue = $CatQueue
 @onready var camera: GameCamera = $Camera2D
+@onready var _playfield_center: Vector2 = actors.to_local(camera.global_position)
 
 
 func _ready() -> void:
@@ -105,6 +106,8 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_refresh_tutorial()
+	if state == RoundState.READY or state == RoundState.FLYING:
+		_defeat_dogs_outside_playfield()
 	if state != RoundState.FLYING:
 		return
 	_flight_time += delta
@@ -126,7 +129,8 @@ func _physics_process(delta: float) -> void:
 					_active_cat = null
 				actor.queue_free()
 			continue
-		if not actor.sleeping and (actor.linear_velocity.length() > 22.0 or absf(actor.angular_velocity) > 0.4):
+		var patrol_motion: bool = actor is DogTarget and actor.is_patrol_motion()
+		if not patrol_motion and not actor.sleeping and (actor.linear_velocity.length() > 22.0 or absf(actor.angular_velocity) > 0.4):
 			still = false
 		if actor is DogTarget and actor.frost_time_left > 0.0 and not actor.is_destroyed:
 			# A suspended target can still fall after thawing and change the outcome.
@@ -138,6 +142,21 @@ func _physics_process(delta: float) -> void:
 	if _flight_time >= MIN_FLIGHT_TIME and (_still_time >= SETTLE_TIME or can_advance):
 		# Give deferred destruction signals this frame time to update the target count.
 		_finish_shot.call_deferred()
+
+
+func _defeat_dogs_outside_playfield() -> void:
+	# Use the default view: zooming/panning must never defeat a target.
+	var view_size := get_viewport_rect().size
+	var bounds := Rect2(_playfield_center - view_size * 0.5, view_size).grow(DogTarget.RADIUS)
+	for actor in actors.get_children():
+		var dog := actor as DogTarget
+		if dog == null or dog.is_destroyed or dog.is_queued_for_deletion():
+			continue
+		var dog_position := dog.position
+		if dog.is_sheltered():
+			dog_position = actors.to_local(dog.shelter.to_global(dog.shelter.dog_offset()))
+		if not bounds.has_point(dog_position):
+			dog.destroy()
 
 
 func _notification(what: int) -> void:
@@ -213,12 +232,17 @@ func _finish_shot() -> void:
 
 func _complete_round(won: bool) -> void:
 	state = RoundState.WON if won else RoundState.LOST
+	for actor in actors.get_children():
+		if actor is DogTarget:
+			actor.patrol_enabled = false
 	camera.cancel_gesture()
+	camera.set_process_input(false)
+	camera.set_process_unhandled_input(false)
 	slingshot.set_enabled(false)
 	_update_hud()
 	var shots_used := level.shots - shots_left
 	var stars := level.stars_for_shots(shots_used) if won else 0
-	hud.show_result(won, shots_used, stars)
+	hud.show_result(won, shots_used, stars, GameHUD.VICTORY_DELAY if won else 0.0)
 	round_completed.emit(won, shots_used, stars)
 
 
@@ -242,6 +266,22 @@ func _refresh_ability() -> void:
 		hud.set_ability_state(GameHUD.AbilityState.CONTACTED)
 	else:
 		hud.set_ability_state(GameHUD.AbilityState.WAITING)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if state != RoundState.FLYING or get_tree().paused:
+		return
+	if event is InputEventMouseButton:
+		if event.device == InputEvent.DEVICE_ID_EMULATION or event.button_index != MOUSE_BUTTON_LEFT or not event.pressed:
+			return
+	elif event is InputEventScreenTouch:
+		if not event.pressed or event.canceled:
+			return
+	else:
+		return
+	if is_instance_valid(_active_cat) and _active_cat.can_activate_ability():
+		use_ability()
+		get_viewport().set_input_as_handled()
 
 
 func use_ability() -> void:
@@ -280,7 +320,7 @@ func _refresh_tutorial() -> void:
 			if _tutorial_ability_used:
 				message = "Приём сработал! У каждого кота своя способность."
 			elif state == RoundState.FLYING and is_instance_valid(_active_cat) and _active_cat.can_activate_ability():
-				message = "Шаг 2/2. Нажми кнопку способности или E в полёте, до удара."
+				message = "Шаг 2/2. Нажми на игровое поле в полёте, до удара."
 			elif state == RoundState.FLYING:
 				message = "Приём доступен до удара. Попробуй со следующим котом."
 			else:

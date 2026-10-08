@@ -13,6 +13,7 @@ func _run() -> void:
 	root.size = Vector2i(1280, 720)
 	root.gui_embed_subwindows = true
 	var app := load("res://scenes/app.tscn").instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.editor_recovery_path = ""
 	app.profile_path = ""
 	root.add_child(app)

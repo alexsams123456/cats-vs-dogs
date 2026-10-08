@@ -23,8 +23,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	var previous_time := visual_time
 	visual_time += delta
-	queue_redraw()
+	if HeroVisual.needs_redraw(previous_time, visual_time):
+		queue_redraw()
 
 
 func _on_visibility_changed() -> void:

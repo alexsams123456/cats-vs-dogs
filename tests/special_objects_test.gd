@@ -143,6 +143,7 @@ func _test_blast() -> void:
 
 func _test_editor() -> void:
 	var app := APP.instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = ""
 	app.editor_recovery_path = ""
 	root.add_child(app)
@@ -223,7 +224,7 @@ func _test_round(dimensions: Vector2i) -> void:
 	_drag(end, touch)
 	_pointer(end, false, touch)
 	_check(game.shots_left == 3 and game.state == GameRound.RoundState.FLYING, "Настоящий жест запускает ровно одного кота")
-	while game._flight_time < 0.65 and game.state == GameRound.RoundState.FLYING:
+	while game._flight_time < 0.65 / Slingshot.FLIGHT_SPEED_SCALE and game.state == GameRound.RoundState.FLYING:
 		await physics_frame
 	game.use_ability()
 	await _ticks(25)

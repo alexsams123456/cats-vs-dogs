@@ -6,6 +6,7 @@ const MEADOW_TREE := preload("res://scripts/world/meadow_tree.gd")
 const SCENERY_PINE := preload("res://scripts/world/scenery_pine.gd")
 const SUN_FACE := preload("res://scripts/visuals/sun_face.gd")
 const BACKGROUND_ACTIVITY := preload("res://scripts/world/background_activity.gd")
+const FLORA := preload("res://scripts/visuals/flora_atlas.gd")
 const PINE_ROOTS := [Vector3(-38, 609, 155), Vector3(70, 608, 111), Vector3(149, 604, 77), Vector3(1179, 603, 107), Vector3(1328, 618, 173), Vector3(1430, 616, 127)]
 const LEAF_COLORS := [Color("b5b975"), Color("d4bd77"), Color("92ad72")]
 const ICE_TIPS := [Vector2(65, 577), Vector2(128, 591), Vector2(397, 592), Vector2(1182, 589), Vector2(1279, 558), Vector2(1428, 578)]
@@ -45,13 +46,24 @@ var _leaf := PackedVector2Array([Vector2(-6, 0), Vector2(-1, -3), Vector2(6, 0),
 var _breeze_line := PackedVector2Array()
 var _time: float = 0.0
 var _visible_world := Rect2(0, 0, 1280, 720)
+var use_batched_polygons: bool = OS.has_feature("web")
 var biome: StringName = &"backyard"
 var sun_face: SunFace
 var _activity: BackgroundActivity
+var use_baked_clouds: bool = OS.has_feature("web")
+var _cloud_texture: Texture2D
+var use_baked_flora: bool = OS.has_feature("web")
+var _grass_texture: Texture2D
+var _flower_texture: Texture2D
 
 
 func _ready() -> void:
 	_build_cloud_shapes()
+	if use_baked_flora:
+		_grass_texture = load("res://assets/scenery/grass_atlas.png") as Texture2D
+		_flower_texture = load("res://assets/scenery/flower_atlas.png") as Texture2D
+	if use_baked_clouds and ResourceLoader.exists("res://assets/scenery/cloud.png"):
+		_cloud_texture = load("res://assets/scenery/cloud.png") as Texture2D
 	sun_face = SUN_FACE.new()
 	sun_face.name = "SunFace"
 	sun_face.position = SUN_CENTER
@@ -168,7 +180,7 @@ func _draw_garden_details() -> void:
 		var sway := _wind_at(x) * 1.4
 		var color: Color = [Color("c2c9df"), Color("e4bead"), Color("e8dfb4"), Color("aec8bc"), Color("d6b8ce")][index]
 		var cloth := PackedVector2Array([Vector2(x, top), Vector2(x + 22, top), Vector2(x + 22 + sway, top + 30), Vector2(x + 11 + sway, top + 33), Vector2(x + sway, top + 30)])
-		draw_colored_polygon(cloth, color)
+		_paint_polygon(cloth, color)
 		draw_line(Vector2(x + 5, top + 4), Vector2(x + 5 + sway, top + 26), color.lightened(0.12), 2, true)
 		for peg in [3, 19]:
 			draw_line(Vector2(x + peg, top - 3), Vector2(x + peg, top + 4), Color("b6a281"), 2.3, true)
@@ -195,7 +207,7 @@ func _draw_rotor(center: Vector2, radius: float, angle: float, colorful: bool) -
 		var color := Color("d1c9a7")
 		if colorful:
 			color = [Color("dca99c"), Color("e1cc87"), Color("9cbeb3"), Color("b7b1d0")][index]
-		draw_colored_polygon(PackedVector2Array([Vector2.ZERO, direction * radius, direction * radius + side * radius * 0.55, side * radius * 0.2]), color)
+		_paint_polygon(PackedVector2Array([Vector2.ZERO, direction * radius, direction * radius + side * radius * 0.55, side * radius * 0.2]), color)
 		draw_line(direction * 3, direction * radius, color.lightened(0.15), 1, true)
 	draw_circle(Vector2.ZERO, 2.4, Color("ede3bd"), true, -1, true)
 	draw_set_transform(Vector2.ZERO)
@@ -359,14 +371,21 @@ func _draw_mountain_breeze() -> void:
 
 
 func _draw_cloud(center: Vector2, scale_factor: float) -> void:
+	if _cloud_texture != null:
+		draw_texture_rect(_cloud_texture, Rect2(center + Vector2(-128, -80) * scale_factor, Vector2(256, 128) * scale_factor), false)
+		return
+	paint_cloud(self, center, scale_factor)
+
+
+func paint_cloud(canvas: CanvasItem, center: Vector2, scale_factor: float) -> void:
 	if _cloud_shape.is_empty():
 		return
-	draw_set_transform(center, 0.0, Vector2.ONE * scale_factor)
-	draw_colored_polygon(_cloud_shape, Color("f8f5e8"))
-	draw_polyline(_cloud_shape, Color("f8f5e8"), 0.9, true)
-	draw_colored_polygon(_cloud_shade, Color("dce7de"))
-	draw_colored_polygon(_cloud_light, Color("fffbed"))
-	draw_set_transform(Vector2.ZERO)
+	canvas.draw_set_transform(center, 0.0, Vector2.ONE * scale_factor)
+	canvas.draw_colored_polygon(_cloud_shape, Color("f8f5e8"))
+	canvas.draw_polyline(_cloud_shape, Color("f8f5e8"), 0.9, true)
+	canvas.draw_colored_polygon(_cloud_shade, Color("dce7de"))
+	canvas.draw_colored_polygon(_cloud_light, Color("fffbed"))
+	canvas.draw_set_transform(Vector2.ZERO)
 
 
 func _build_cloud_shapes() -> void:
@@ -449,6 +468,13 @@ func _draw_water_ripples() -> void:
 func _draw_grass(x: float, index: int) -> void:
 	var root := Vector2(x, 621)
 	var breeze := _wind_at(x)
+	if _grass_texture != null:
+		FLORA.paint(self, _grass_texture, root, index % 18, breeze, false)
+		return
+	paint_grass(self, root, index, breeze)
+
+
+func paint_grass(canvas: CanvasItem, root: Vector2, index: int, breeze: float) -> void:
 	var tint := Color("6b915d") if index % 3 == 0 else Color("517e58")
 	for blade in 4:
 		var spread := float(blade) - 1.5
@@ -458,7 +484,7 @@ func _draw_grass(x: float, index: int) -> void:
 		_blade[2] = root + Vector2(spread * 6.0 + breeze, -height)
 		_blade[3] = root + Vector2(spread * 4.0 + breeze * 0.35 + 0.8, -height * 0.55)
 		_blade[4] = root + Vector2(spread * 2.5 + 1.5, 0)
-		draw_colored_polygon(_blade, tint)
+		canvas.draw_colored_polygon(_blade, tint)
 
 
 func _wind_at(x: float) -> float:
@@ -468,23 +494,30 @@ func _wind_at(x: float) -> float:
 func _draw_flower(index: int) -> void:
 	var root: Vector2 = FLOWER_ROOTS[index]
 	var sway := _wind_at(root.x)
+	if _flower_texture != null:
+		FLORA.paint(self, _flower_texture, root, index, sway, true)
+		return
+	paint_flower(self, root, index, sway)
+
+
+func paint_flower(canvas: CanvasItem, root: Vector2, index: int, sway: float) -> void:
 	var height := 19.0 + float(index * 11 % 21)
 	var middle := root + Vector2(sway * 0.3, -height * 0.5)
 	var center := root + Vector2(sway, -height)
 	var color: Color = FLOWER_COLORS[index % FLOWER_COLORS.size()]
-	draw_line(root, middle, STEM_COLOR, 1.5, true)
-	draw_line(middle, center, STEM_COLOR, 1.3, true)
-	draw_line(middle, middle + Vector2(5.0, -4.0), Color("70935e"), 2.6, true)
+	canvas.draw_line(root, middle, STEM_COLOR, 1.5, true)
+	canvas.draw_line(middle, center, STEM_COLOR, 1.3, true)
+	canvas.draw_line(middle, middle + Vector2(5.0, -4.0), Color("70935e"), 2.6, true)
 	if index % 4 == 2:
 		# Upright lavender heads break up the round daisies.
 		for bloom in 4:
 			var side := -1.0 if bloom % 2 == 0 else 1.0
-			draw_circle(center + Vector2(side * 2.0, float(bloom) * 3.0), 2.6, color)
+			canvas.draw_circle(center + Vector2(side * 2.0, float(bloom) * 3.0), 2.6, color)
 	else:
 		for petal in 5:
 			var direction := Vector2.from_angle(float(petal) * TAU / 5.0 - PI * 0.5)
-			draw_circle(center + direction * 3.0, 2.8, color)
-		draw_circle(center, 2.1, Color("c99b4e"))
+			canvas.draw_circle(center + direction * 3.0, 2.8, color)
+		canvas.draw_circle(center, 2.1, Color("c99b4e"))
 
 
 func _draw_drifting_seeds() -> void:
@@ -509,7 +542,7 @@ func _draw_falling_leaves() -> void:
 		color.a = sin(progress * PI) * 0.8
 		var turn := sin(_time * 2.4 + phase)
 		draw_set_transform(center, _time * 0.9 + phase, Vector2(0.35 + absf(turn) * 0.65, 0.8))
-		draw_colored_polygon(_leaf, color)
+		_paint_polygon(_leaf, color)
 		draw_line(Vector2(-4, 0), Vector2(4, 0), Color(0.44, 0.53, 0.32, color.a * 0.7), 0.8, true)
 		draw_set_transform(Vector2.ZERO)
 
@@ -548,3 +581,15 @@ func _draw_butterfly(index: int) -> void:
 	draw_line(Vector2(0, -3), Vector2(-2.5, -6), Color("667357"), 0.8, true)
 	draw_line(Vector2(0, -3), Vector2(2.5, -6), Color("667357"), 0.8, true)
 	draw_set_transform(Vector2.ZERO)
+
+
+func _can_batch_polygon(points: PackedVector2Array) -> bool:
+	return use_batched_polygons and (points.size() == 3 or points.size() == 4)
+
+
+func _paint_polygon(points: PackedVector2Array, color: Color) -> void:
+	# Те же вершины и цвет; простые выпуклые фигуры объединяются WebGL в пакет.
+	if _can_batch_polygon(points):
+		draw_primitive(points, PackedColorArray([color]), PackedVector2Array())
+	else:
+		draw_colored_polygon(points, color)

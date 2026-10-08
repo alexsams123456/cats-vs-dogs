@@ -15,6 +15,8 @@ const BARK_PROXIMITY: float = 550.0
 
 @export var definition: CharacterDefinition
 @export_range(0.1, 10.0) var bark_cooldown_seconds: float = 0.9
+@export_range(0.0, 120.0) var patrol_distance: float = 48.0
+@export_range(0.0, 100.0) var patrol_speed: float = 55.0
 
 var shield_active: bool = false
 var jumps_used: int = 0
@@ -37,12 +39,20 @@ var _bark_time_left: float = 0.0
 var _last_barked_cat_id: int = 0
 var _barks_for_cat: int = 0
 var _idle_bark_delay_left: float = 0.0
+var patrol_enabled: bool = true
+var _patrol_origin_x: float = 0.0
+var _patrol_direction: float = -1.0
+var _patrol_driving: bool = false
+var _patrol_recovery_left: float = 0.0
 
 
 func _ready() -> void:
 	shield_active = _kind() == &"armored"
 	_visual_phase = float(get_instance_id() % 997) * 0.061
 	_idle_bark_delay_left = 0.7 + fmod(_visual_phase, 1.2)
+	_patrol_origin_x = global_position.x
+	if _kind() == &"jumper" and patrol_distance > 0.0 and patrol_speed > 0.0:
+		can_sleep = false
 	queue_redraw()
 
 
@@ -82,6 +92,8 @@ func leave_shelter() -> void:
 	z_index = _sheltered_z_index
 	freeze = false
 	linear_velocity = exit_velocity
+	_patrol_origin_x = global_position.x
+	_patrol_recovery_left = 0.5
 	sleeping = false
 	_surprise_time_left = 0.45
 	queue_redraw()
@@ -93,6 +105,8 @@ func _follow_shelter() -> void:
 
 
 func _process(delta: float) -> void:
+	var previous_time := visual_time
+	var previous_expression := expression
 	visual_time += delta
 	_surprise_time_left = maxf(0.0, _surprise_time_left - delta)
 	_alert_time_left = maxf(0.0, _alert_time_left - delta)
@@ -115,7 +129,8 @@ func _process(delta: float) -> void:
 		expression = &"alert"
 	else:
 		expression = &"idle"
-	queue_redraw()
+	if expression != previous_expression or HeroVisual.needs_redraw(previous_time, visual_time):
+		queue_redraw()
 
 
 func _update_alert() -> void:
@@ -159,6 +174,7 @@ func show_bark(duration: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	super._physics_process(delta)
+	_patrol_recovery_left = maxf(0.0, _patrol_recovery_left - delta)
 	if is_sheltered():
 		_follow_shelter()
 		return
@@ -193,6 +209,57 @@ func _physics_process(delta: float) -> void:
 		apply_central_impulse(Vector2(0, -285.0) * mass)
 		_show_burst(34.0, _accent_color(), 0.3, Vector2(0, RADIUS))
 		return
+
+
+func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
+	_patrol_driving = false
+	_update_patrol(state)
+	super._integrate_forces(state)
+
+
+func _update_patrol(state: PhysicsDirectBodyState2D) -> void:
+	if _kind() != &"jumper" or not patrol_enabled or patrol_distance <= 0.0 or patrol_speed <= 0.0:
+		return
+	if is_destroyed or freeze or is_sheltered() or _age < spawn_grace_seconds:
+		return
+	# An impact or an evasive jump keeps its real momentum until it settles.
+	if absf(state.linear_velocity.y) > 35.0 or absf(state.linear_velocity.x) > patrol_speed + 35.0 or absf(state.angular_velocity) > 3.0:
+		_patrol_recovery_left = 0.5
+	if _patrol_recovery_left > 0.0 or state.get_contact_count() == 0:
+		return
+	var origin := state.transform.origin
+	# Patrol only solid ground. Moving structural supports keep ordinary physics.
+	if not _patrol_has_ground(origin):
+		return
+	if (origin.x - _patrol_origin_x) * _patrol_direction >= patrol_distance:
+		_patrol_direction *= -1.0
+	if not _patrol_path_clear(origin, _patrol_direction):
+		_patrol_direction *= -1.0
+	var target_speed := patrol_speed * _patrol_direction if _patrol_path_clear(origin, _patrol_direction) else 0.0
+	var velocity := state.linear_velocity
+	velocity.x = move_toward(velocity.x, target_speed, 1200.0 * state.step)
+	state.linear_velocity = velocity
+	# The round body walks instead of rolling; knockback is handled above.
+	state.angular_velocity = clampf(-state.transform.get_rotation() * 12.0, -2.0, 2.0)
+	_patrol_driving = true
+
+
+func _patrol_has_ground(origin: Vector2) -> bool:
+	var ray := PhysicsRayQueryParameters2D.create(origin, origin + Vector2(0, RADIUS + 12.0), 1, [get_rid()])
+	var hit := get_world_2d().direct_space_state.intersect_ray(ray)
+	return not hit.is_empty() and hit.normal.y < -0.7
+
+
+func _patrol_path_clear(origin: Vector2, direction: float) -> bool:
+	var ahead := origin + Vector2(direction * (RADIUS + 12.0), 0)
+	if not _patrol_has_ground(ahead):
+		return false
+	var ray := PhysicsRayQueryParameters2D.create(origin, ahead, 13, [get_rid()])
+	return get_world_2d().direct_space_state.intersect_ray(ray).is_empty()
+
+
+func is_patrol_motion() -> bool:
+	return _patrol_driving and patrol_enabled and not freeze and not is_destroyed and absf(linear_velocity.y) < 22.0 and absf(linear_velocity.x) <= patrol_speed + 1.0 and absf(angular_velocity) < 3.0
 
 
 func apply_frost(duration: float) -> void:

@@ -8,13 +8,22 @@ const MOUNTAIN_STREAM := [Vector2(873, 476), Vector2(792, 496), Vector2(836, 515
 const GROUND_Y: float = 620.0
 const WORLD_LEFT: float = -2200.0
 const WORLD_RIGHT: float = 3500.0
+const BAKED_TOP: float = -80.0
+const BAKED_BOTTOM: float = 840.0
+const BAKED_TILE_WIDTH: float = 1900.0
+const BAKED_SCALE: float = 2.0
 
 var animation_time: float = 0.0
 var biome: StringName = &"backyard"
 var _ambient: AmbientLife
+var use_baked_art: bool = OS.has_feature("web")
+var _baked_tiles: Array[Texture2D] = []
+var _baked_biome: StringName
+var _ambient_delta: float = 0.0
 
 
 func _ready() -> void:
+	_load_baked_art()
 	_ambient = AMBIENT_LIFE.new()
 	_ambient.name = "AmbientLife"
 	_ambient.biome = biome
@@ -24,6 +33,7 @@ func _ready() -> void:
 
 func set_biome(value: StringName) -> void:
 	biome = value if value in [&"backyard", &"mountain", &"glacier"] else &"backyard"
+	_load_baked_art()
 	if is_instance_valid(_ambient):
 		_ambient.set_biome(biome)
 		_ambient.set_water_path(_water_path())
@@ -31,12 +41,20 @@ func set_biome(value: StringName) -> void:
 
 
 func _process(delta: float) -> void:
+	var previous_time := animation_time
 	animation_time += delta
+	_ambient_delta += delta
+	if OS.has_feature("web") and int(previous_time * 30.0) == int(animation_time * 30.0):
+		return
 	var visible_world := get_global_transform_with_canvas().affine_inverse() * get_viewport_rect()
-	_ambient.advance(delta, animation_time, visible_world)
+	_ambient.advance(_ambient_delta, animation_time, visible_world)
+	_ambient_delta = 0.0
 
 
 func _draw() -> void:
+	if use_baked_art and _baked_tiles.size() == 3:
+		_draw_baked_art()
+		return
 	if biome == &"mountain":
 		_draw_mountain_valley()
 		return
@@ -53,6 +71,35 @@ func _draw() -> void:
 	_draw_garden()
 	_draw_garden_details()
 	_draw_ground()
+
+
+func _load_baked_art() -> void:
+	if not use_baked_art or (_baked_biome == biome and _baked_tiles.size() == 3):
+		return
+	_baked_tiles.clear()
+	_baked_biome = biome
+	for index in 3:
+		var path := "res://assets/backdrops/%s_%d.png" % [biome, index]
+		if not ResourceLoader.exists(path):
+			_baked_tiles.clear()
+			return
+		_baked_tiles.append(load(path) as Texture2D)
+
+
+func _draw_baked_art() -> void:
+	var sky := Color("a9d6d6")
+	var ground := Color("eadcbd")
+	if biome == &"mountain":
+		sky = Color("91b8cf")
+		ground = Color("a49e8c")
+	elif biome == &"glacier":
+		sky = Color("9ebdce")
+		ground = Color("90bacf")
+	draw_rect(Rect2(WORLD_LEFT, -1600, WORLD_RIGHT - WORLD_LEFT, 2300), sky)
+	draw_rect(Rect2(WORLD_LEFT, GROUND_Y, WORLD_RIGHT - WORLD_LEFT, 1500), ground)
+	for index in _baked_tiles.size():
+		var bounds := Rect2(Vector2(WORLD_LEFT + float(index) * BAKED_TILE_WIDTH, BAKED_TOP), _baked_tiles[index].get_size() / BAKED_SCALE)
+		draw_texture_rect(_baked_tiles[index], bounds, false)
 
 
 func _draw_sky() -> void:

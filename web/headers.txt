@@ -1,0 +1,10 @@
+/index.wasm
+  Content-Type: application/wasm
+  Content-Encoding: gzip
+/index.pck
+  Content-Type: application/octet-stream
+  Content-Encoding: gzip
+/index.html
+  Cache-Control: no-cache
+/
+  Cache-Control: no-cache

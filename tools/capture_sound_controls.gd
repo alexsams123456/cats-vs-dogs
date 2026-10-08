@@ -21,6 +21,7 @@ func _run() -> void:
 	AudioServer.set_bus_mute(0, true)
 	GameLocalization.apply_locale("ru")
 	var app := APP_SCENE.instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = ""
 	app.editor_recovery_path = ""
 	root.add_child(app)

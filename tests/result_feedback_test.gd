@@ -16,6 +16,7 @@ func _run() -> void:
 	root.add_child(hud)
 	hud.set_campaign(true, true, 2)
 	hud.set_loadout(CharacterCatalog.CATS[0], CharacterCatalog.DOGS[0])
+	await _test_transition(hud)
 	hud.set_result_cast(PackedStringArray(["frost", "ghost", "homing", "bomb"]))
 	hud.show_result(true, 2, 3)
 	await _layout()
@@ -31,6 +32,8 @@ func _run() -> void:
 	await _click(hud._next_button, false)
 	await _click(hud._overlay_menu_button, true)
 	_check(next_events == [true] and menu_events == [true], "Mouse and touch can leave before the celebration ends")
+	celebration.start(PackedStringArray(["frost", "ghost", "homing"]))
+	celebration.notification(Node.NOTIFICATION_APPLICATION_FOCUS_IN)
 	paused = true
 	var before := celebration.elapsed
 	await create_timer(0.08, true).timeout
@@ -83,6 +86,51 @@ func _test_layouts(hud: GameHUD) -> void:
 				if has_next:
 					_check(root.get_visible_rect().encloses(hud._next_button.get_global_rect()), "Next remains on screen")
 				_check(not hud._result_celebration.get_global_rect().intersects(hud._result_detail.get_global_rect()), "Art and translated result do not overlap")
+
+
+func _test_transition(hud: GameHUD) -> void:
+	for dimensions: Vector2i in [Vector2i(1280, 720), Vector2i(1600, 720), Vector2i(960, 720)]:
+		root.size = dimensions
+		if OS.get_cmdline_user_args().has("--capture-result-transition"):
+			DisplayServer.window_set_size(dimensions)
+			await create_timer(0.2).timeout
+		hud.show_result(true, 2, 3, GameHUD.VICTORY_DELAY)
+		hud.show_rewards(PackedStringArray(["first_win"]))
+		await _layout()
+		_check(not hud._overlay.visible and hud._result_celebration.elapsed == 0.0, "Victory leaves the last hit visible before the popup")
+		await _capture_transition("delay", dimensions)
+		paused = true
+		await create_timer(GameHUD.VICTORY_DELAY + 0.1, true).timeout
+		_check(not hud._overlay.visible, "Pause freezes the pending result")
+		paused = false
+		# Advance the tween explicitly so shader compilation cannot skip the sampled frame.
+		hud.show_result(true, 2, 3, GameHUD.VICTORY_DELAY)
+		hud.show_rewards(PackedStringArray(["first_win"]))
+		hud._result_tween.pause()
+		hud._result_tween.custom_step(GameHUD.VICTORY_DELAY + 0.1)
+		_check(hud._overlay.visible and hud._overlay.modulate.a > 0.0 and hud._overlay.modulate.a < 1.0, "The popup fades in after the delay")
+		_check(hud._result_card.scale.x < 1.0, "The card grows gently during its entrance")
+		await _capture_transition("enter", dimensions)
+		hud._result_tween.play()
+		await create_timer(GameHUD.RESULT_FADE_DURATION + 0.1).timeout
+		_check(is_equal_approx(hud._overlay.modulate.a, 1.0) and hud._result_card.scale.is_equal_approx(Vector2.ONE), "The entrance finishes at full opacity and normal size")
+		_check(hud._reward_notice.is_visible_in_tree(), "Rewards recorded during the delay survive the entrance")
+		await _capture_transition("ready", dimensions)
+	hud.show_result(true, 2, 3, GameHUD.VICTORY_DELAY)
+	hud.show_pause(true)
+	await create_timer(GameHUD.VICTORY_DELAY + GameHUD.RESULT_FADE_DURATION).timeout
+	_check(hud._overlay.visible and hud._overlay_sound.is_visible_in_tree() and hud._overlay.modulate.a == 1.0, "Replacing a pending result cancels its transition")
+	hud.show_pause(false)
+
+
+func _capture_transition(phase: String, dimensions: Vector2i) -> void:
+	if not OS.get_cmdline_user_args().has("--capture-result-transition"):
+		return
+	await RenderingServer.frame_post_draw
+	DirAccess.make_dir_recursive_absolute("res://.artifacts")
+	var picture := root.get_texture().get_image()
+	_check(picture.get_size() == dimensions, "Captured transition uses the requested window size")
+	picture.save_png("res://.artifacts/result-transition-%d-%s.png" % [dimensions.x, phase])
 
 
 func _click(button: BaseButton, touch: bool) -> void:

@@ -14,13 +14,10 @@ config/name="Кошки против собак"
 config/description="A playful 2D physics puzzle prototype for desktop and mobile."
 run/main_scene="res://scenes/startup.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
-config/icon="res://assets/icon.svg"
 boot_splash/bg_color=Color(1, 0.964706, 0.858824, 1)
 boot_splash/image="res://assets/boot_splash.png"
+config/icon="res://assets/icons/launcher_main.png"
 boot_splash/minimum_display_time=900
-boot_splash/show_image=true
-boot_splash/stretch_mode=1
-boot_splash/use_filter=true
 
 [display]
 
@@ -30,6 +27,7 @@ window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/dpi/allow_hidpi.web=true
 
 [gui]
 
@@ -70,6 +68,10 @@ locale/test="ru"
 2d_physics/layer_2="Cats"
 2d_physics/layer_3="Dogs"
 2d_physics/layer_4="Blocks"
+
+[physics]
+
+common/physics_interpolation=true
 
 [rendering]
 

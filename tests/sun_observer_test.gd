@@ -131,6 +131,7 @@ func _test_pause(game: GameRound, face: SunFace) -> void:
 
 func _test_loss_and_restart() -> void:
 	var app := APP_SCENE.instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = ""
 	app.editor_recovery_path = ""
 	root.add_child(app)

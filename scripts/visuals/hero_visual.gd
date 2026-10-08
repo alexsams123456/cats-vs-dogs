@@ -7,9 +7,40 @@ const CREAM := Color("fff5dc")
 const WHITE := Color("fffefa")
 const BLUSH := Color("e89b8b")
 const GOLD := Color("ffd477")
+const ATLAS := preload("res://scripts/visuals/hero_atlas.gd")
+const ELLIPSE_MASK := preload("res://assets/scenery/ellipse_mask.svg")
+static var use_atlas: bool = OS.has_feature("web")
+static var _large_circle: PackedVector2Array = _unit_circle(40)
+static var _small_circle: PackedVector2Array = _unit_circle(16)
+
+
+static func needs_redraw(previous_time: float, current_time: float) -> bool:
+	# Only artwork uses 30 Hz on Web; physics, input and audio keep their clocks.
+	return not OS.has_feature("web") or int(previous_time * 30.0) != int(current_time * 30.0)
 
 
 static func paint(canvas: CanvasItem, species: StringName, kind: StringName, fur: Color, accent: Color, time: float, phase: float, expression: StringName = &"idle", shield: bool = false) -> void:
+	var cat: bool = species == &"cat"
+	var cached: bool = use_atlas and ATLAS.paint_layer(canvas, species, kind, fur, accent, time, phase, expression, false)
+	if not cached:
+		paint_body(canvas, species, kind, fur, accent, time, phase, expression)
+	_face(canvas, accent, time, phase, expression, cat)
+	if not cached or not ATLAS.paint_layer(canvas, species, kind, fur, accent, time, phase, expression, true):
+		_accessories(canvas, kind, fur, accent, sin(time * 2.8 + phase), cat, false)
+	if not cat and kind == &"armored" and shield:
+		_shield(canvas, accent)
+	if cat and kind == &"bomb":
+		_fuse(canvas, time, phase)
+	if expression == &"hit":
+		for index in 3:
+			var angle: float = -2.55 + float(index) * 0.95 + sin(time * 8.0 + phase) * 0.12
+			_star(canvas, Vector2.from_angle(angle) * 32.0, 3.1, time * 2.0, GOLD)
+	elif expression == &"alert" and not cat:
+		canvas.draw_line(Vector2(29, -22), Vector2(30, -27), GOLD, 2.3, true)
+		canvas.draw_circle(Vector2(28.5, -18.5), 1.3, GOLD)
+
+
+static func paint_body(canvas: CanvasItem, species: StringName, kind: StringName, fur: Color, accent: Color, time: float, phase: float, expression: StringName) -> void:
 	var cat: bool = species == &"cat"
 	var motion: float = sin(time * 2.8 + phase)
 	_tail(canvas, fur, accent, time, phase, cat)
@@ -22,17 +53,6 @@ static func paint(canvas: CanvasItem, species: StringName, kind: StringName, fur
 	if not cat:
 		_ellipse(canvas, Vector2(-8.8, -3.2), Vector2(9.2, 10), accent.lerp(fur, 0.3))
 	_markings(canvas, kind, accent, cat)
-	_face(canvas, accent, time, phase, expression, cat)
-	_accessories(canvas, kind, fur, accent, motion, cat, shield)
-	if cat and kind == &"bomb":
-		_fuse(canvas, time, phase)
-	if expression == &"hit":
-		for index in 3:
-			var angle: float = -2.55 + float(index) * 0.95 + sin(time * 8.0 + phase) * 0.12
-			_star(canvas, Vector2.from_angle(angle) * 32.0, 3.1, time * 2.0, GOLD)
-	elif expression == &"alert" and not cat:
-		canvas.draw_line(Vector2(29, -22), Vector2(30, -27), GOLD, 2.3, true)
-		canvas.draw_circle(Vector2(28.5, -18.5), 1.3, GOLD)
 
 
 static func _tail(canvas: CanvasItem, fur: Color, accent: Color, time: float, phase: float, cat: bool) -> void:
@@ -211,9 +231,13 @@ static func _accessories(canvas: CanvasItem, kind: StringName, fur: Color, accen
 		for offset in [-1.4, 1.4]:
 			canvas.draw_line(paw + Vector2(offset, 1.3), paw + Vector2(offset, 3.3), fur.darkened(0.3), 0.8, true)
 	if not cat and kind == &"armored" and shield:
-		_polygon(canvas, [Vector2(22, 8), Vector2(32, 12), Vector2(30, 25), Vector2(22, 32), Vector2(14, 25), Vector2(12, 12)], accent, true)
-		_polygon(canvas, [Vector2(22, 11), Vector2(28.5, 14), Vector2(27, 23), Vector2(22, 27.8), Vector2(17, 23), Vector2(15.5, 14)], accent.lightened(0.27), true)
-		canvas.draw_polyline(PackedVector2Array([Vector2(18, 19), Vector2(21, 22), Vector2(26, 16)]), CREAM, 1.8, true)
+		_shield(canvas, accent)
+
+
+static func _shield(canvas: CanvasItem, accent: Color) -> void:
+	_polygon(canvas, [Vector2(22, 8), Vector2(32, 12), Vector2(30, 25), Vector2(22, 32), Vector2(14, 25), Vector2(12, 12)], accent, true)
+	_polygon(canvas, [Vector2(22, 11), Vector2(28.5, 14), Vector2(27, 23), Vector2(22, 27.8), Vector2(17, 23), Vector2(15.5, 14)], accent.lightened(0.27), true)
+	canvas.draw_polyline(PackedVector2Array([Vector2(18, 19), Vector2(21, 22), Vector2(26, 16)]), CREAM, 1.8, true)
 
 
 static func _cat_cape(canvas: CanvasItem, kind: StringName, accent: Color, motion: float) -> void:
@@ -326,15 +350,30 @@ static func _ear_twitch(time: float, phase: float, side: float) -> float:
 
 
 static func _ellipse(canvas: CanvasItem, center: Vector2, radius: Vector2, color: Color, outlined: bool = false) -> void:
-	var points := PackedVector2Array()
-	var count: int = 40 if radius.x > 10.0 else 16
-	for index in count:
-		var angle: float = TAU * float(index) / float(count)
-		points.append(center + Vector2(cos(angle), sin(angle)) * radius)
+	if use_atlas:
+		# Texture quads batch on the GPU, including live eyes and mouth shapes.
+		if outlined:
+			var outer := radius + Vector2.ONE * 0.65
+			canvas.draw_texture_rect(ELLIPSE_MASK, Rect2(center - outer, outer * 2.0), false, INK)
+			var inner := (radius - Vector2.ONE * 0.65).max(Vector2.ONE * 0.01)
+			canvas.draw_texture_rect(ELLIPSE_MASK, Rect2(center - inner, inner * 2.0), false, color)
+		else:
+			canvas.draw_texture_rect(ELLIPSE_MASK, Rect2(center - radius, radius * 2.0), false, color)
+		return
+	# Transform cached geometry in native code, preserving the original outline.
+	var circle := _large_circle if radius.x > 10.0 else _small_circle
+	var points: PackedVector2Array = Transform2D(Vector2(radius.x, 0), Vector2(0, radius.y), center) * circle
 	canvas.draw_colored_polygon(points, color)
 	if outlined:
 		points.append(points[0])
 		canvas.draw_polyline(points, INK, 1.3, true)
+
+
+static func _unit_circle(count: int) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	for index in count:
+		points.append(Vector2.from_angle(TAU * float(index) / float(count)))
+	return points
 
 
 static func _polygon(canvas: CanvasItem, vertices: Array[Vector2], color: Color, outlined: bool = false) -> void:

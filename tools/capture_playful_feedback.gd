@@ -19,6 +19,7 @@ func _run() -> void:
 	DirAccess.make_dir_recursive_absolute("res://.artifacts")
 	AudioServer.set_bus_mute(0, true)
 	var app := load("res://scenes/app.tscn").instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = ""
 	app.editor_recovery_path = ""
 	root.add_child(app)
@@ -126,6 +127,7 @@ func _check_immediate_next(app: GameApp, touch: bool) -> void:
 	game.set_paused(false)
 	# Интеграция результата и перехода: исход вызван напрямую, а не физическим попаданием.
 	game._complete_round(true)
+	await create_timer(GameHUD.VICTORY_DELAY + GameHUD.RESULT_FADE_DURATION).timeout
 	await _layout()
 	_check(game.hud._result_celebration.elapsed < ResultCelebration.DURATION, "Result navigation is ready before the celebration finishes")
 	var old_game: WeakRef = weakref(game)

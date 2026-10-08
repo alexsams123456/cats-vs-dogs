@@ -41,13 +41,13 @@ func can_activate() -> bool:
 func activate() -> void:
 	match _kind():
 		&"classic":
-			_cat.linear_velocity = _direction() * maxf(dash_speed, _cat.linear_velocity.length())
+			_cat.linear_velocity = _direction() * maxf(dash_speed * _cat.flight_speed_scale, _cat.linear_velocity.length())
 			_start_effect(0.45)
 			_burst(50.0)
 		&"splitter":
 			_split.call_deferred()
 		&"heavy":
-			_cat.linear_velocity = Vector2(_cat.linear_velocity.x * 0.15, dive_speed)
+			_cat.linear_velocity = Vector2(_cat.linear_velocity.x * 0.15, dive_speed * _cat.flight_speed_scale)
 			_cat.mass *= 2.0
 			_start_effect(0.65)
 			_burst(60.0)
@@ -75,7 +75,8 @@ func integrate(state: PhysicsDirectBodyState2D) -> void:
 	var offset := _target.global_position - _cat.global_position
 	if offset.length_squared() < 1.0 or last_speed < 1.0:
 		return
-	var turn := clampf(state.linear_velocity.angle_to(offset), -homing_turn_speed * state.step, homing_turn_speed * state.step)
+	var turn_step := homing_turn_speed * state.step * _cat.flight_speed_scale
+	var turn := clampf(state.linear_velocity.angle_to(offset), -turn_step, turn_step)
 	state.linear_velocity = state.linear_velocity.rotated(turn)
 
 
@@ -86,6 +87,8 @@ func stop_on_contact() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _kind() == &"homing" or _kind() == &"ghost":
+		delta *= _cat.flight_speed_scale
 	_effect_age += delta
 	time_left = maxf(0.0, time_left - delta)
 	if time_left <= 0.0:
@@ -117,6 +120,7 @@ func _split() -> void:
 	for side in [-1.0, 1.0]:
 		var fragment := scene.instantiate() as CatProjectile
 		fragment.definition = _cat.definition
+		fragment.set_flight_speed_scale(_cat.flight_speed_scale)
 		fragment.position = _cat.position + normal * side * 42.0
 		_cat.get_parent().add_child(fragment)
 		fragment.make_fragment()

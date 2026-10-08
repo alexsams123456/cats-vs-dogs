@@ -14,6 +14,7 @@ func _initialize() -> void:
 func _capture() -> void:
 	DirAccess.make_dir_recursive_absolute("res://.artifacts")
 	var app := load("res://scenes/app.tscn").instantiate() as GameApp
+	app.animate_screen_changes = false
 	app.profile_path = ""
 	app.editor_recovery_path = ""
 	root.add_child(app)
@@ -74,6 +75,7 @@ func _capture() -> void:
 		if not _check(game.state == GameRound.RoundState.WON and app.profile.stars_for(CampaignCatalog.IDS[0]) == game.level.stars_for_shots(first_used), "Real pointer throws win and save the earned stars"):
 			await _finish(app)
 			return
+		await create_timer(GameHUD.VICTORY_DELAY + GameHUD.RESULT_FADE_DURATION).timeout
 		await _shot("first-victory", dimensions)
 		_check(app.profile.rewards.has("first_win") and game.hud._reward_notice.visible, "Real campaign victory grants and announces its first badge")
 		_click(game.hud._next_button, true)
@@ -90,7 +92,7 @@ func _capture() -> void:
 		_pointer(launch, true, true)
 		_drag(launch + second_pull, true)
 		_pointer(launch + second_pull, false, true)
-		while game._flight_time + 0.0001 < second_route[0][2] and game.state == GameRound.RoundState.FLYING:
+		while game._flight_time + 0.0001 < second_route[0][2] / Slingshot.FLIGHT_SPEED_SCALE and game.state == GameRound.RoundState.FLYING:
 			await physics_frame
 		if dimensions.x == 1280:
 			var key := InputEventKey.new()
@@ -185,7 +187,7 @@ func _finish_route(game: GameRound, route: Array, start_index: int) -> void:
 		_pointer(anchor + pull, false, true)
 		_check(game.shots_left == before - 1, "Each follow-up gesture launches exactly one cat")
 		if shot[2] >= 0.0:
-			while game._flight_time + 0.0001 < shot[2] and game.state == GameRound.RoundState.FLYING:
+			while game._flight_time + 0.0001 < shot[2] / Slingshot.FLIGHT_SPEED_SCALE and game.state == GameRound.RoundState.FLYING:
 				await physics_frame
 			if game.state == GameRound.RoundState.FLYING:
 				var could_activate := is_instance_valid(game._active_cat) and game._active_cat.can_activate_ability()

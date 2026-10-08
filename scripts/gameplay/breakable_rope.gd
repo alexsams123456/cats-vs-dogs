@@ -19,7 +19,10 @@ func _on_body_entered(body: Node2D) -> void:
 		return
 	if body is CatProjectile and not body.was_launched:
 		return
-	receive_hit(moving_body.linear_velocity.length())
+	var strength := moving_body.linear_velocity.length()
+	if moving_body is CatProjectile:
+		strength /= moving_body.flight_speed_scale
+	receive_hit(strength)
 
 
 func receive_hit(strength: float) -> void:
