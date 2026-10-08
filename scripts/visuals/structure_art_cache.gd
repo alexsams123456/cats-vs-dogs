@@ -13,13 +13,14 @@ static var _entries: Dictionary[String, Dictionary] = {}
 static var _pending: Dictionary[String, Dictionary] = {}
 static var _active_job: BakeJob
 static var _bytes: int = 0
+static var _viewport_watches: Dictionary[int, ViewportWatch] = {}
 
 
 static func paint(canvas: CanvasItem, key: String, bounds: Rect2, painter: Callable) -> bool:
 	if not enabled or DisplayServer.get_name() == "headless" or not canvas.is_inside_tree():
 		return false
-	var screen_transform := canvas.get_viewport().get_final_transform() * canvas.get_global_transform_with_canvas()
-	if maxf(screen_transform.x.length(), screen_transform.y.length()) > float(SCALE) + 0.001:
+	_watch_canvas(canvas)
+	if maximum_screen_scale(canvas) > float(SCALE) + 0.001:
 		return false
 	var padded := cache_bounds(bounds)
 	var dimensions := texture_dimensions(bounds)
@@ -42,6 +43,34 @@ static func paint(canvas: CanvasItem, key: String, bounds: Rect2, painter: Calla
 	_pending[key] = {"bounds": padded, "painter": painter, "requesters": requesters}
 	_start_next(canvas.get_tree())
 	return false
+
+
+static func maximum_screen_scale(canvas: CanvasItem) -> float:
+	var viewport := canvas.get_viewport()
+	var screen_transform := viewport.get_final_transform() * canvas.get_global_transform_with_canvas()
+	var maximum := maxf(screen_transform.x.length(), screen_transform.y.length())
+	var camera := viewport.get_camera_2d() as GameCamera
+	if camera != null and canvas.get_canvas() == camera.get_canvas():
+		# Физические детали не перерисовываются при zoom; заранее учитываем весь жест.
+		var current_zoom := maxf(0.001, minf(absf(camera.zoom.x), absf(camera.zoom.y)))
+		maximum *= maxf(1.0, camera.max_zoom / current_zoom)
+	return maximum
+
+
+static func _watch_canvas(canvas: CanvasItem) -> void:
+	var viewport := canvas.get_viewport()
+	var id := viewport.get_instance_id()
+	if not _viewport_watches.has(id):
+		var watch := ViewportWatch.new()
+		watch.viewport_id = id
+		_viewport_watches[id] = watch
+		viewport.size_changed.connect(watch.redraw)
+		viewport.tree_exiting.connect(watch.release)
+	var canvas_id := canvas.get_instance_id()
+	var viewport_watch: ViewportWatch = _viewport_watches[id]
+	if not viewport_watch.requesters.has(canvas_id):
+		viewport_watch.requesters[canvas_id] = weakref(canvas)
+		canvas.tree_exiting.connect(viewport_watch.forget.bind(canvas_id), CONNECT_ONE_SHOT)
 
 
 static func cache_bounds(bounds: Rect2) -> Rect2:
@@ -119,6 +148,28 @@ static func _finish_job(job: BakeJob, image: Image, elapsed_usec: int) -> void:
 			for canvas: CanvasItem in canvases:
 				canvas.queue_redraw()
 	_start_next(job.get_tree())
+
+
+class ViewportWatch:
+	extends RefCounted
+	var viewport_id: int
+	var requesters: Dictionary[int, WeakRef] = {}
+
+	func forget(id: int) -> void:
+		requesters.erase(id)
+
+
+	func redraw() -> void:
+		for id: int in requesters.keys():
+			var canvas := requesters[id].get_ref() as CanvasItem
+			if is_instance_valid(canvas) and canvas.is_inside_tree():
+				canvas.queue_redraw()
+			else:
+				requesters.erase(id)
+
+
+	func release() -> void:
+		StructureArtCache._viewport_watches.erase(viewport_id)
 
 
 class BakeJob:

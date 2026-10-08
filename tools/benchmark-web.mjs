@@ -73,7 +73,7 @@ try {
 	await page.waitForFunction(() => window.cvdBenchmark.renderedFrames >= 10, null, { timeout: 30000 });
 	const report = {
 		startedAt, url, browser: `Firefox ${browser.version()}`, headed: !args.includes('--headless'),
-		viewport: { width: 1280, height: 720 }, deviceScaleFactor: 2, durationMs, localBuildSha256: hashes,
+		viewport: { width: 1280, height: 720 }, deviceScaleFactor: 2, durationMs, levelWarmupMs: 12000, localBuildSha256: hashes,
 		measurement: 'Время синхронного rAF callback с WebGL draw calls, без ожидания завершения GPU; FPS по интервалам таких callbacks. Изолированный тестовый профиль.',
 	};
 	async function sample(name, sampleDurationMs = durationMs) {
@@ -111,7 +111,7 @@ try {
 	}
 	await sample('menu');
 	await page.mouse.click(1020, 280);
-	await page.waitForTimeout(2600);
+	await page.waitForTimeout(12000);
 	await sample('level');
 	await page.mouse.move(235, 460);
 	await page.mouse.down();

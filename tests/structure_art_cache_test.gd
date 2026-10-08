@@ -20,6 +20,7 @@ func _run() -> void:
 	_test_bounds()
 	_test_requesters()
 	_test_budget()
+	await _test_camera_and_resize()
 	if "--capture-structures" in OS.get_cmdline_user_args():
 		if DisplayServer.get_name() == "headless":
 			_check(false, "Structure capture requires a graphical renderer")
@@ -99,6 +100,58 @@ func _test_art() -> void:
 				var key := "test-house-%s-%s-%.1f" % [house_type, material, damage]
 				var painter := HOUSE.paint_uncached.bind(material, damage, house_type)
 				await _compare_art(key, _house_bounds(house_type), painter, material == &"wood" and damage == 0.5)
+
+
+func _test_camera_and_resize() -> void:
+	var viewport := SubViewport.new()
+	viewport.size = Vector2i(320, 240)
+	root.add_child(viewport)
+	var camera := GameCamera.new()
+	camera.process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
+	viewport.add_child(camera)
+	camera.make_current()
+	camera.force_update_scroll()
+	var actor := ResizeProbe.new()
+	actor.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+	viewport.add_child(actor)
+	viewport.global_canvas_transform = Transform2D.IDENTITY.scaled(Vector2.ONE * 3.0)
+	_check(is_equal_approx(CACHE.maximum_screen_scale(actor), 6.0), "DPR three reserves the camera's full zoom before the first cache")
+	_check(CACHE.maximum_screen_scale(actor) > CACHE.SCALE, "Initial DPR three keeps vectors for a later zoom to two")
+	viewport.global_canvas_transform = Transform2D.IDENTITY.scaled(Vector2.ONE * 2.0)
+	_check(is_equal_approx(CACHE.maximum_screen_scale(actor), 4.0), "DPR two preserves cache detail throughout the camera gesture")
+	var layer := CanvasLayer.new()
+	viewport.add_child(layer)
+	var overlay := Node2D.new()
+	layer.add_child(overlay)
+	_check(is_equal_approx(CACHE.maximum_screen_scale(overlay), 2.0), "Camera zoom does not multiply a different CanvasLayer")
+	CACHE._watch_canvas(actor)
+	CACHE._watch_canvas(actor)
+	var id := viewport.get_instance_id()
+	_check(CACHE._viewport_watches[id].requesters.size() == 1, "Resize uses one weak entry for repeated cache paints")
+	await process_frame
+	await process_frame
+	var before: int = actor.draws
+	viewport.size = Vector2i(360, 240)
+	await process_frame
+	await process_frame
+	_check(actor.draws > before, "Viewport resize redraws static structures to reevaluate the quality guard")
+	actor.free()
+	_check(CACHE._viewport_watches[id].requesters.is_empty(), "Structure exit removes its weak watcher entry before a resize")
+	var dead := Node2D.new()
+	CACHE._viewport_watches[id].requesters[dead.get_instance_id()] = weakref(dead)
+	dead.free()
+	viewport.size_changed.emit()
+	_check(CACHE._viewport_watches[id].requesters.is_empty(), "Resize discards dead weak structure references")
+	viewport.free()
+	_check(not CACHE._viewport_watches.has(id), "Deleting a viewport releases its resize watcher")
+
+
+class ResizeProbe:
+	extends Node2D
+	var draws: int = 0
+
+	func _draw() -> void:
+		draws += 1
 
 
 func _paint_transparent(canvas: CanvasItem) -> void:
