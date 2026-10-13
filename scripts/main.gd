@@ -14,11 +14,13 @@ const DOG_SCENE := preload("res://scenes/actors/dog_target.tscn")
 const BLOCK_SCENE := preload("res://scenes/actors/wooden_block.tscn")
 const HOUSE_SCENE := preload("res://scenes/actors/dog_house.tscn")
 const WEIGHT_SCENE := preload("res://scenes/actors/hanging_weight.tscn")
+const SPRING_SCENE := preload("res://scenes/actors/spring_pad.tscn")
 const MUSIC_SCENE := preload("res://scenes/audio/background_music.tscn")
 const AimGestureVisual := preload("res://scripts/visuals/aim_gesture.gd")
 const MIN_FLIGHT_TIME := 1.2
 const SETTLE_TIME := 0.8
 const MAX_FLIGHT_TIME := 10.0
+const GLOAT_MIN_FLIGHT_TIME: float = 0.6
 const WORLD_BOUNDS := Rect2(-400, -1000, 2200, 2100)
 
 @export var level: LevelDefinition
@@ -35,6 +37,8 @@ var background_music: BackgroundMusic
 var _flight_time: float = 0.0
 var _still_time: float = 0.0
 var _active_cat: CatProjectile
+var _shot_dog_hit: bool = false
+var _gloat_started: bool = false
 var _tutorial_ability_used: bool = false
 var _tutorial_shelter_opened: bool = false
 var _aim_gesture: AimGestureVisual
@@ -75,6 +79,10 @@ func _ready() -> void:
 		block.size = level.block_sizes[index]
 		block.material_id = level.block_material_at(index)
 		actors.add_child(block)
+	for point in level.spring_positions:
+		var spring := SPRING_SCENE.instantiate() as SpringPad
+		spring.position = point
+		actors.add_child(spring)
 	for point in level.weight_positions:
 		var weight := WEIGHT_SCENE.instantiate() as HangingWeight
 		weight.position = point
@@ -93,11 +101,12 @@ func _ready() -> void:
 		dog.definition = dog_definition if level.dog_kinds.is_empty() else CharacterCatalog.find_dog(StringName(level.dog_kinds[index]))
 		dog.position = level.dog_positions[index]
 		dog.defeated.connect(_on_dog_defeated)
+		dog.impact_received.connect(_on_dog_hit)
 		actors.add_child(dog)
 		if house != null:
 			dog.enter_shelter(house)
 	_load_cat()
-	if campaign_mode and not editor_preview and level.tutorial == &"aim":
+	if campaign_mode and not editor_preview and level.tutorial == &"aim" and not TVControls.is_enabled():
 		_aim_gesture = AimGestureVisual.new()
 		_aim_gesture.name = "AimGesture"
 		slingshot.add_child(_aim_gesture)
@@ -136,6 +145,7 @@ func _physics_process(delta: float) -> void:
 			# A suspended target can still fall after thawing and change the outcome.
 			still = false
 	_still_time = _still_time + delta if still else 0.0
+	_update_premature_celebration()
 	# The timer may prepare another cat, but cannot decide the final result
 	# while bodies are still moving or a frozen target can fall after thawing.
 	var can_advance := shots_left > 0 and _flight_time >= MAX_FLIGHT_TIME
@@ -196,11 +206,14 @@ func _update_queue() -> void:
 
 
 func _on_launched(projectile: CatProjectile) -> void:
+	_stop_dog_celebrations()
 	_active_cat = projectile
 	shots_left -= 1
 	state = RoundState.FLYING
 	_flight_time = 0.0
 	_still_time = 0.0
+	_shot_dog_hit = false
+	_gloat_started = false
 	_update_queue()
 	_update_hud()
 
@@ -209,9 +222,48 @@ func _on_dog_defeated() -> void:
 	if state == RoundState.WON or state == RoundState.LOST:
 		return
 	dogs_left = maxi(0, dogs_left - 1)
+	_shot_dog_hit = true
 	_update_hud()
 	if dogs_left == 0:
 		_complete_round(true)
+
+
+func _on_dog_hit(_strength: float) -> void:
+	_shot_dog_hit = true
+
+
+func _update_premature_celebration() -> void:
+	if state != RoundState.FLYING or _gloat_started or _shot_dog_hit or _flight_time < GLOAT_MIN_FLIGHT_TIME:
+		return
+	var targets: Array[DogTarget] = []
+	var rightmost_target_x: float = -INF
+	for actor: Node in actors.get_children():
+		var dog := actor as DogTarget
+		if dog != null and not dog.is_destroyed and not dog.is_queued_for_deletion():
+			targets.append(dog)
+			rightmost_target_x = maxf(rightmost_target_x, dog.global_position.x)
+	if targets.is_empty():
+		return
+	for actor: Node in actors.get_children():
+		var cat := actor as CatProjectile
+		if cat == null or not cat.was_launched or cat.is_queued_for_deletion():
+			continue
+		# A ricochet or a still-airborne kitten may yet reach a target.
+		if not cat.has_contacted() and (cat.global_position.x <= rightmost_target_x + DogTarget.RADIUS + CatProjectile.RADIUS or cat.linear_velocity.x <= 0.0):
+			return
+		for dog in targets:
+			var incoming := dog.global_position - cat.global_position
+			if incoming.length() < 180.0 and cat.linear_velocity.dot(incoming.normalized()) > 60.0:
+				return
+	for dog in targets:
+		dog.start_gloating()
+		_gloat_started = _gloat_started or dog.is_gloating()
+
+
+func _stop_dog_celebrations() -> void:
+	for actor: Node in actors.get_children():
+		if actor is DogTarget:
+			actor.stop_gloating()
 
 
 func _finish_shot() -> void:
@@ -232,6 +284,7 @@ func _finish_shot() -> void:
 
 func _complete_round(won: bool) -> void:
 	state = RoundState.WON if won else RoundState.LOST
+	_stop_dog_celebrations()
 	for actor in actors.get_children():
 		if actor is DogTarget:
 			actor.patrol_enabled = false

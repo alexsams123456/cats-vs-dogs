@@ -32,6 +32,9 @@ static func objects(level: LevelDefinition) -> Array[Dictionary]:
 		var point := level.weight_positions[index]
 		var bounds := Rect2(point - HangingWeightVisual.WEIGHT_SIZE * 0.5, HangingWeightVisual.WEIGHT_SIZE)
 		result.append({"kind": 2, "index": index, "bounds": bounds, "extent": Rect2(point + HangingWeightVisual.BOUNDS.position, HangingWeightVisual.BOUNDS.size), "solid": true})
+	for index in level.spring_positions.size():
+		var bounds := Rect2(level.spring_positions[index] - SpringPadVisual.SIZE * 0.5, SpringPadVisual.SIZE)
+		result.append({"kind": 3, "index": index, "bounds": bounds, "extent": bounds, "solid": true})
 	return result
 
 
@@ -47,7 +50,7 @@ static func inspect(level: LevelDefinition) -> Array[Dictionary]:
 		var bounds: Rect2 = body.bounds
 		if not BUILD_AREA.grow(0.1).encloses(body.extent):
 			issues.append(_issue(&"outside", body))
-		if absf(bounds.end.y - BUILD_AREA.end.y) <= SUPPORT_GAP or body.kind == 2:
+		if absf(bounds.end.y - BUILD_AREA.end.y) <= SUPPORT_GAP or body.kind in [2, 3]:
 			supported[slot] = true
 		for other_slot in range(slot):
 			if _overlaps(body, bodies[other_slot]):

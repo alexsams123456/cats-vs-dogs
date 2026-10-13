@@ -11,7 +11,7 @@ var play_count: int = 0
 
 func _ready() -> void:
 	bus = &"SFX"
-	volume_db = -12.0
+	volume_db = -13.0
 	max_polyphony = 1
 	var cat := get_parent() as CatProjectile
 	if cat == null:

@@ -31,11 +31,12 @@ static func at_position(index: int, point: Vector2) -> LevelDefinition:
 	level.dog_positions = _shift(level.dog_positions, offset)
 	level.block_positions = _shift(level.block_positions, offset)
 	level.weight_positions = _shift(level.weight_positions, offset)
+	level.spring_positions = _shift(level.spring_positions, offset)
 	return level
 
 
 static func placement_error(draft: LevelDefinition, addition: LevelDefinition) -> String:
-	if draft.dog_positions.size() + addition.dog_positions.size() > LevelDefinition.MAX_OBJECTS or draft.block_positions.size() + addition.block_positions.size() > LevelDefinition.MAX_OBJECTS or draft.weight_positions.size() + addition.weight_positions.size() > LevelDefinition.MAX_OBJECTS:
+	if draft.dog_positions.size() + addition.dog_positions.size() > LevelDefinition.MAX_OBJECTS or draft.block_positions.size() + addition.block_positions.size() > LevelDefinition.MAX_OBJECTS or draft.weight_positions.size() + addition.weight_positions.size() > LevelDefinition.MAX_OBJECTS or draft.spring_positions.size() + addition.spring_positions.size() > LevelDefinition.MAX_OBJECTS:
 		return "Для постройки не хватает места в лимите объектов. Удали несколько объектов."
 	var bounds := bounds_for(addition).grow(-0.1)
 	for body: Dictionary in LevelLayoutReview.objects(draft):
@@ -56,6 +57,7 @@ static func append_to(draft: LevelDefinition, addition: LevelDefinition) -> void
 	draft.block_sizes.append_array(addition.block_sizes)
 	draft.block_materials.append_array(addition.block_materials)
 	draft.weight_positions.append_array(addition.weight_positions)
+	draft.spring_positions.append_array(addition.spring_positions)
 
 
 static func _shift(points: PackedVector2Array, offset: Vector2) -> PackedVector2Array:

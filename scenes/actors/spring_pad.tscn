@@ -1,0 +1,26 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/actors/spring_pad.gd" id="1"]
+
+[sub_resource type="RectangleShape2D" id="Platform"]
+size = Vector2(96, 36)
+
+[sub_resource type="RectangleShape2D" id="Sensor"]
+size = Vector2(92, 24)
+
+[node name="SpringPad" type="StaticBody2D"]
+collision_layer = 1
+collision_mask = 14
+script = ExtResource("1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("Platform")
+
+[node name="Trigger" type="Area2D" parent="."]
+position = Vector2(0, -28)
+collision_layer = 0
+collision_mask = 10
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger"]
+shape = SubResource("Sensor")

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/level_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "Пружинный двор"
+shots = 4
+dog_positions = PackedVector2Array(920, 425)
+block_positions = PackedVector2Array(920, 535)
+block_sizes = PackedVector2Array(80, 170)
+block_materials = PackedStringArray("stone")
+spring_positions = PackedVector2Array(620, 602, 1080, 602)

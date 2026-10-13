@@ -8,7 +8,7 @@ signal selection_changed
 signal tool_changed
 signal placement_rejected(message: String)
 
-enum Tool { SELECT, DOG, POST, BEAM, BOX, DOG_HOUSE, TOWER, HANGING_WEIGHT, BUILDING }
+enum Tool { SELECT, DOG, POST, BEAM, BOX, DOG_HOUSE, TOWER, HANGING_WEIGHT, SPRING, BUILDING }
 
 const WORLD_SIZE := Vector2(1280, 720)
 const BUILD_AREA := Rect2(400, 100, 840, 520)
@@ -94,10 +94,14 @@ func selected_position() -> Vector2:
 		return draft.block_positions[selected_index]
 	if selected_kind == 2:
 		return draft.weight_positions[selected_index]
+	if selected_kind == 3:
+		return draft.spring_positions[selected_index]
 	return Vector2.ZERO
 
 
 func selected_size() -> Vector2:
+	if selected_kind == 3:
+		return SpringPadVisual.SIZE
 	if selected_kind == 2:
 		return HangingWeightVisual.BOUNDS.size
 	if selected_kind == 1:
@@ -169,6 +173,8 @@ func move_selected(point: Vector2) -> void:
 		draft.dog_positions[selected_index] = point
 	elif selected_kind == 2:
 		draft.weight_positions[selected_index] = point
+	elif selected_kind == 3:
+		draft.spring_positions[selected_index] = point
 	else:
 		draft.block_positions[selected_index] = point
 	selection_changed.emit()
@@ -189,6 +195,8 @@ func delete_selected() -> void:
 		draft.dog_house_types.remove_at(selected_index)
 	elif selected_kind == 2:
 		draft.weight_positions.remove_at(selected_index)
+	elif selected_kind == 3:
+		draft.spring_positions.remove_at(selected_index)
 	else:
 		draft.block_positions.remove_at(selected_index)
 		draft.block_sizes.remove_at(selected_index)
@@ -265,7 +273,15 @@ func _begin(point: Vector2, pointer: int) -> void:
 			_add_object(point)
 		return
 	clear_selection()
+	for index in range(draft.spring_positions.size() - 1, -1, -1):
+		var bounds := Rect2(draft.spring_positions[index] - SpringPadVisual.SIZE * 0.5, SpringPadVisual.SIZE)
+		if bounds.grow(8.0 / _scale_factor()).has_point(point):
+			selected_kind = 3
+			selected_index = index
+			break
 	for index in range(draft.weight_positions.size() - 1, -1, -1):
+		if selected_kind >= 0:
+			break
 		var bounds := Rect2(draft.weight_positions[index] + HangingWeightVisual.BOUNDS.position, HangingWeightVisual.BOUNDS.size)
 		if bounds.grow(8.0 / _scale_factor()).has_point(point):
 			selected_kind = 2
@@ -305,13 +321,18 @@ func _add_object(point: Vector2) -> void:
 		return
 	var adds_dog := tool == Tool.DOG or tool == Tool.DOG_HOUSE
 	var adds_weight := tool == Tool.HANGING_WEIGHT
+	var adds_spring := tool == Tool.SPRING
 	var block_count := 3 if tool == Tool.TOWER else 1
-	if (adds_dog and draft.dog_positions.size() >= LevelDefinition.MAX_OBJECTS) or (adds_weight and draft.weight_positions.size() >= LevelDefinition.MAX_OBJECTS) or (not adds_dog and not adds_weight and draft.block_positions.size() + block_count > LevelDefinition.MAX_OBJECTS):
+	if (adds_dog and draft.dog_positions.size() >= LevelDefinition.MAX_OBJECTS) or (adds_weight and draft.weight_positions.size() >= LevelDefinition.MAX_OBJECTS) or (adds_spring and draft.spring_positions.size() >= LevelDefinition.MAX_OBJECTS) or (not adds_dog and not adds_weight and not adds_spring and draft.block_positions.size() + block_count > LevelDefinition.MAX_OBJECTS):
 		return
 	edit_started.emit()
 	draft.normalize_materials()
 	point = _snap(point)
-	if adds_weight:
+	if adds_spring:
+		selected_kind = 3
+		selected_index = draft.spring_positions.size()
+		draft.spring_positions.append(constrain_position(point, SpringPadVisual.SIZE))
+	elif adds_weight:
 		selected_kind = 2
 		selected_index = draft.weight_positions.size()
 		var offset := HangingWeightVisual.BOUNDS.get_center()
@@ -426,6 +447,9 @@ func _draw() -> void:
 		for point in draft.weight_positions:
 			draw_set_transform(world_to_local(point), 0, Vector2.ONE * zoom)
 			HangingWeightVisual.paint(self)
+		for point in draft.spring_positions:
+			draw_set_transform(world_to_local(point), 0, Vector2.ONE * zoom)
+			SpringPadVisual.paint(self)
 		if selected_kind >= 0:
 			draw_set_transform(_origin(), 0, Vector2.ONE * zoom)
 			var selection := Rect2(selected_position() + _selection_offset() - selected_size() * 0.5, selected_size()).grow(7)

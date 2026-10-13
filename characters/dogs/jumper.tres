@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="CharacterDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3 uid="uid://bap4knhmxao7u"]
 
-[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="1"]
+[ext_resource type="Script" uid="uid://csp6p17gsnnup" path="res://scripts/data/character_definition.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
@@ -12,4 +12,4 @@ description = "Ходит вправо-влево по земле и подпр�
 ability_hint = "Следи за движением и прыжком, выбирай момент для броска."
 fur_color = Color(0.8, 0.63, 0.42, 1)
 accent_color = Color(0.72, 0.4, 0.23, 1)
-
+patrol_speed_scale = 1.0

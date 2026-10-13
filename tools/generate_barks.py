@@ -5,7 +5,7 @@
 """
 
 from array import array
-from math import cos, exp, pi, sin, sqrt, tanh
+from math import cos, exp, pi, sin, sqrt
 from pathlib import Path
 from random import Random
 import sys
@@ -27,33 +27,39 @@ def curve(points, position):
 def make_bark(name, pitch, throat, duration, seed):
     rng = Random(seed)
     samples = []
+    envelopes = []
     phase = 0.0
     jitter = 0.0
     low_noise = 0.0
+    softened = 0.0
+    filtered_voice = 0.0
+    filter_blend = 1.0 - exp(-2.0 * pi * 1900.0 / RATE)
     noise_state = [[0.0, 0.0], [0.0, 0.0]]
     for index in range(int(RATE * duration)):
         seconds = index / RATE
         progress = seconds / duration
-        jitter = jitter * 0.96 + rng.uniform(-1.0, 1.0) * 0.04
-        frequency = pitch * curve([(0, 0.88), (0.12, 1.18), (0.4, 1.0), (1, 0.58)], progress)
-        frequency *= 1.0 + jitter * 0.24 + 0.045 * sin(2.0 * pi * 43.0 * seconds)
+        jitter = jitter * 0.985 + rng.uniform(-1.0, 1.0) * 0.015
+        frequency = pitch * curve([(0, 0.92), (0.16, 1.1), (0.4, 0.96), (1, 0.62)], progress)
+        frequency *= 1.0 + jitter * 0.12 + 0.012 * sin(2.0 * pi * 8.0 * seconds)
         phase += 2.0 * pi * frequency / RATE
         formants = (
-            throat * curve([(0, 410), (0.15, 810), (0.35, 690), (1, 300)], progress),
-            throat * curve([(0, 1150), (0.19, 1600), (0.45, 1220), (1, 700)], progress),
+            throat * curve([(0, 380), (0.18, 640), (0.35, 560), (1, 300)], progress),
+            throat * curve([(0, 1050), (0.2, 1350), (0.45, 1120), (1, 650)], progress),
         )
         voice = 0.0
         for harmonic in range(1, 33):
             hz = harmonic * frequency
+            if hz >= RATE * 0.45:
+                break
             resonance = (
-                0.15
-                + 2.4 * exp(-0.5 * ((hz - formants[0]) / 240.0) ** 2)
-                + 1.35 * exp(-0.5 * ((hz - formants[1]) / 370.0) ** 2)
-                + 0.5 * exp(-0.5 * ((hz - 2700.0 * throat) / 650.0) ** 2)
+                0.12
+                + 1.8 * exp(-0.5 * ((hz - formants[0]) / 240.0) ** 2)
+                + 0.8 * exp(-0.5 * ((hz - formants[1]) / 370.0) ** 2)
             )
-            voice += sin(harmonic * phase + harmonic * 0.19) * resonance / harmonic ** 1.05
-        # Subharmonics and irregular breath give the short vowel a coarse throat.
-        voice += 0.42 * sin(phase * 0.5) + 0.18 * sin(phase * 1.5)
+            voice += (sin(harmonic * phase + harmonic * 0.19) * resonance
+                      * exp(-(hz / 2400.0) ** 2) / harmonic ** 1.55)
+        # Тихий грудной призвук сохраняет «гав», не превращая его в рычание.
+        voice += 0.14 * sin(phase * 0.5)
         noise = rng.uniform(-1.0, 1.0)
         low_noise = 0.55 * low_noise + 0.45 * noise
         breath = 0.0
@@ -67,15 +73,19 @@ def make_bark(name, pitch, throat, duration, seed):
             )
             noise_state[band] = [filtered, previous]
             breath += filtered
-        breath_mix = curve([(0, 0.85), (0.12, 0.38), (0.65, 0.5), (1, 1.5)], progress)
-        sound = tanh(1.35 * voice + breath * breath_mix + low_noise * 0.15)
-        # A brief attack, falling body and breathy release make a single "woof".
-        envelope = curve([(0, 0), (0.055, 1), (0.25, 0.96), (0.62, 0.47), (1, 0)], progress)
-        envelope *= 0.9 + 0.1 * sin(2.0 * pi * 57.0 * seconds)
-        samples.append(sound * envelope)
+        breath_mix = curve([(0, 0.3), (0.18, 0.12), (0.65, 0.2), (1, 0.45)], progress)
+        sound = voice + breath * breath_mix + low_noise * 0.035
+        filtered_voice += filter_blend * (sound - filtered_voice)
+        softened += filter_blend * (filtered_voice - softened)
+        # Плавный вдох, короткая гласная и выдох вместо резкого щелчка.
+        envelope = curve([(0, 0), (0.12, 1), (0.3, 0.88), (0.65, 0.35), (1, 0)], progress)
+        samples.append(softened * envelope)
+        envelopes.append(envelope)
 
+    offset = sum(samples) / sum(envelopes)
+    samples = [value - offset * envelope for value, envelope in zip(samples, envelopes)]
     peak = max(abs(value) for value in samples)
-    samples = [value * 0.8 / peak for value in samples]
+    samples = [value * 0.7 / peak for value in samples]
     samples[0] = samples[-1] = 0.0
     pcm = array("h", (round(value * 32767) for value in samples))
     if sys.byteorder != "little":
@@ -87,7 +97,7 @@ def make_bark(name, pitch, throat, duration, seed):
         output.setframerate(RATE)
         output.writeframes(pcm.tobytes())
     rms = sqrt(sum(value * value for value in samples) / len(samples))
-    print(f"{path.name}: {duration:.2f}s, PCM16 mono {RATE}Hz, peak=0.80, RMS={rms:.3f}")
+    print(f"{path.name}: {duration:.2f}s, PCM16 mono {RATE}Hz, peak=0.70, RMS={rms:.3f}")
 
 
 if __name__ == "__main__":

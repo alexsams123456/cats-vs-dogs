@@ -32,6 +32,10 @@ func _run() -> void:
 	var definitions: Array[CharacterDefinition] = []
 	definitions.append_array(CATALOG.CATS)
 	definitions.append_array(CATALOG.DOGS)
+	var selected_kind := ""
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--kind="):
+			selected_kind = argument.trim_prefix("--kind=")
 	for species in ["cat", "dog"]:
 		var menu := CharacterDefinition.new()
 		menu.species = species
@@ -41,6 +45,8 @@ func _run() -> void:
 		menu.set_meta("atlas_cell", 256)
 		definitions.append(menu)
 	for definition in definitions:
+		if not selected_kind.is_empty() and String(definition.id) != selected_kind:
+			continue
 		var layers: Array[String] = ["idle", "front"]
 		if definition.species == "cat":
 			layers.append_array(["aim", "fly"])

@@ -17,6 +17,8 @@ const DOGS: Array[CharacterDefinition] = [
 	preload("res://characters/dogs/scout.tres"),
 	preload("res://characters/dogs/armored.tres"),
 	preload("res://characters/dogs/jumper.tres"),
+	preload("res://characters/dogs/rover.tres"),
+	preload("res://characters/dogs/runner.tres"),
 ]
 
 

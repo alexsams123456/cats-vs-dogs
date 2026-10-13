@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"runner"
+species = "dog"
+display_name = "Рывок"
+tagline = "БЕГ С ПЕРЕДЫШКАМИ"
+description = "Быстро перебегает по земле и делает короткие остановки. Не прыгает: лови передышку."
+ability_hint = "Бросай с учётом остановок Рывка."
+fur_color = Color(0.9, 0.74, 0.52, 1)
+accent_color = Color(0.35, 0.43, 0.73, 1)
+patrol_speed_scale = 1.5
+patrol_distance_scale = 1.15
+patrol_walk_seconds = 1.0
+patrol_rest_seconds = 0.8

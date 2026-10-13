@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"rover"
+species = "dog"
+display_name = "Дозор"
+tagline = "СПОКОЙНЫЙ ПАТРУЛЬ"
+description = "Медленно ходит по земле туда-сюда. Не прыгает: целься на пути его движения."
+ability_hint = "Выбирай момент, когда Дозор проходит под прицелом."
+fur_color = Color(0.7, 0.77, 0.72, 1)
+accent_color = Color(0.24, 0.52, 0.44, 1)
+patrol_speed_scale = 0.6
+patrol_distance_scale = 0.75

@@ -18,6 +18,7 @@ func _run() -> void:
 	for pull: Vector2 in [Vector2(-74.2462, 74.2462), Vector2(-90, 30), Vector2(-35, 55)]:
 		await _compare_arc(pull, false)
 	await _compare_arc(Vector2(-90, 30), true)
+	await _check_extended_pull()
 	await _check_fragments()
 	await _check_ability_speeds()
 	await _check_impact()
@@ -73,6 +74,63 @@ func _compare_arc(pull: Vector2, zigzag: bool) -> void:
 	for actor: Node in [original, slowed, sling]:
 		actor.queue_free()
 	await process_frame
+
+
+func _check_extended_pull() -> void:
+	var pull := Vector2(-140, 50)
+	var extended_range := await _measure_pull_range(pull)
+	var previous_range := await _measure_pull_range(pull, 105.0)
+	_check(extended_range >= 1240.0, "Extended shallow pull reaches the far edge before landing: %.1f px" % extended_range)
+	_check(previous_range < 1240.0, "The same pull at the previous limit falls short: %.1f px" % previous_range)
+	_check(extended_range > previous_range + 400.0, "Longer tension adds useful range: %.1f px" % (extended_range - previous_range))
+	var sling := SLING.instantiate() as Slingshot
+	sling.position = Vector2(235, 460)
+	root.add_child(sling)
+	var cat := CAT.instantiate() as CatProjectile
+	cat.collision_mask = 0
+	root.add_child(cat)
+	cat.meow_count = CatProjectile.MAX_MEOWS
+	sling.load_projectile(cat)
+	var excessive_pull := pull * 3.0
+	sling.preview_remote_pull(excessive_pull)
+	_check(is_equal_approx(cat.position.distance_to(sling.position), sling.max_pull), "Preview clamps excessive tension at the new limit")
+	_check(sling.launch_from_pull(excessive_pull), "Excessive tension launches at the limit")
+	_check(cat.linear_velocity.distance_to(-excessive_pull.normalized() * sling.max_pull * sling.launch_speed) < 0.01, "Excessive tension cannot exceed maximum launch power")
+	cat.queue_free()
+	sling.queue_free()
+	await process_frame
+
+
+func _measure_pull_range(pull: Vector2, previous_limit: float = 0.0) -> float:
+	var sling := SLING.instantiate() as Slingshot
+	sling.position = Vector2(235, 460)
+	if previous_limit > 0.0:
+		sling.max_pull = previous_limit
+	root.add_child(sling)
+	var cat := CAT.instantiate() as CatProjectile
+	cat.collision_mask = 0
+	root.add_child(cat)
+	cat.meow_count = CatProjectile.MAX_MEOWS
+	sling.load_projectile(cat)
+	_check(sling.launch_from_pull(pull), "The real sling launches a shallow ordinary throw")
+	if previous_limit == 0.0:
+		_check(cat.position.distance_to(sling.position + pull) < 0.01, "Longer aiming travel is not clamped at the previous limit")
+		_check(cat.linear_velocity.distance_to(-pull * sling.launch_speed) < 0.01, "Extended tension contributes its full launch power")
+	var airborne_range := cat.position.x
+	var landed := false
+	for tick in 360:
+		await physics_frame
+		await process_frame
+		if cat.position.y + CatProjectile.RADIUS >= 620.0:
+			landed = true
+			break
+		airborne_range = maxf(airborne_range, cat.position.x)
+	_check(landed, "The range measurement ends at ground height")
+	_check(not cat.ability_spent and is_zero_approx(cat.ability.time_left), "Ordinary range does not require an ability")
+	cat.queue_free()
+	sling.queue_free()
+	await process_frame
+	return airborne_range
 
 
 func _check_fragments() -> void:

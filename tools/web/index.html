@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+	<meta name="theme-color" content="#fff6db">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<title>Кошки против собак</title>
+	<link rel="stylesheet" href="game.css">
+	<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
+<link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
+
+</head>
+<body>
+	<div id="game"><canvas id="canvas" tabindex="0">Браузер не поддерживает игровое поле.</canvas></div>
+	<div id="fps" hidden>FPS: —</div>
+	<div id="status" class="overlay">
+		<img id="splash" src="index.png" alt="Кошки против собак">
+		<button id="start" type="button">Играть</button>
+		<progress id="progress" hidden aria-label="Загрузка игры"></progress>
+		<p id="notice" role="status">Прогресс сохраняется в этом браузере.</p>
+		<button id="retry" type="button" hidden>Попробовать ещё раз</button>
+	</div>
+	<div id="rotate" class="overlay" hidden><strong>Поверните телефон</strong><span>Играть удобнее горизонтально ↔</span></div>
+	<noscript>Для игры включите JavaScript в настройках браузера.</noscript>
+	<script src="index.js"></script>
+	<script src="game-loader.js"></script>
+</body>
+</html>

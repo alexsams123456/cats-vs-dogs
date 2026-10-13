@@ -11,6 +11,7 @@ const BIOMES: Array[StringName] = [&"backyard", &"mountain", &"glacier"]
 @export var dog_positions: PackedVector2Array = PackedVector2Array()
 @export var block_positions: PackedVector2Array = PackedVector2Array()
 @export var weight_positions: PackedVector2Array = PackedVector2Array()
+@export var spring_positions: PackedVector2Array = PackedVector2Array()
 @export var block_sizes: PackedVector2Array = PackedVector2Array()
 @export var block_materials: PackedStringArray = PackedStringArray()
 ## Empty entries mark dogs without a shelter; an empty array supports older levels.
@@ -73,6 +74,11 @@ func is_valid() -> bool:
 		return false
 	if block_positions.size() != block_sizes.size() or block_positions.size() > MAX_OBJECTS:
 		return false
+	if spring_positions.size() > MAX_OBJECTS:
+		return false
+	for point in spring_positions:
+		if not point.is_finite() or (point.x < 448 or point.x > 1192 or point.y < 118 or point.y > 602):
+			return false
 	if weight_positions.size() > MAX_OBJECTS:
 		return false
 	for position in weight_positions:

@@ -233,6 +233,7 @@ func _build_home(parent: Control) -> void:
 	editor_button = _navigation_button("Редактор", "Построй свой идеальный двор", &"tools", Color("e3e9e8"))
 	editor_button.pressed.connect(editor_requested.emit)
 	menu.add_child(editor_button)
+	editor_button.visible = not TVControls.is_enabled()
 	sandbox_button = _button("Песочница  ·  Выбрать героев  ›", true)
 	sandbox_button.add_theme_font_size_override("font_size", 17)
 	sandbox_button.pressed.connect(sandbox_requested.emit)
@@ -240,6 +241,8 @@ func _build_home(parent: Control) -> void:
 	_home_note = _label("Потяни рогатку. Отпусти кота. Спаси этот двор от скуки.", 16, true)
 	_home_note.add_theme_color_override("font_color", INK)
 	_home_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if TVControls.is_enabled():
+		_home_note.text = "Пульт: стрелки — выбор · OK — открыть · Назад — вернуться"
 	_home.add_child(_home_note)
 
 
@@ -499,6 +502,8 @@ func _update_layout() -> void:
 	for heading in _chapter_headings:
 		heading.custom_minimum_size.x = 0 if wide else 270
 	var margins := Vector4(38, 20, 38, 22)
+	if TVControls.is_enabled():
+		margins = Vector4(48, 36, 48, 36)
 	if OS.has_feature("mobile"):
 		var safe := DisplayServer.get_display_safe_area()
 		var screen := DisplayServer.screen_get_size()

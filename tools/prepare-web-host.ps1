@@ -10,6 +10,8 @@ New-Item -ItemType Directory -Force $TargetRoot | Out-Null
 Get-ChildItem -LiteralPath $SourceRoot -File | Where-Object { $_.Name -ne '_headers' } | Copy-Item -Destination $TargetRoot -Force
 foreach ($CompressedName in @('index.wasm', 'index.pck')) {
     $TargetPath = Join-Path $TargetRoot $CompressedName
+    # gzip_static должен отдавать тот же выпуск, что и несжатый файл.
+    Copy-Item -LiteralPath $TargetPath -Destination ($TargetPath + '.gz') -Force
     $InputStream = [System.IO.MemoryStream]::new([System.IO.File]::ReadAllBytes($TargetPath))
     $OutputStream = [System.IO.MemoryStream]::new()
     try {

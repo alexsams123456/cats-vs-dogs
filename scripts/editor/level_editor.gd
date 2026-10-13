@@ -288,7 +288,7 @@ func _build_sidebar(body: HBoxContainer) -> void:
 	_house_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(_house_description)
 	column.add_child(_label("ОБЪЕКТЫ", 16))
-	var names: Array[String] = ["Выбрать / двигать", "+ Собака", "+ Стойка", "+ Перекладина", "+ Ящик", "+ Собака в будке", "+ Башня", "+ Подвешенный груз"]
+	var names: Array[String] = ["Выбрать / двигать", "+ Собака", "+ Стойка", "+ Перекладина", "+ Ящик", "+ Собака в будке", "+ Башня", "+ Подвешенный груз", "+ Пружина"]
 	for index in names.size():
 		var button := _button(names[index], _choose_tool.bind(index))
 		button.clip_text = true
@@ -599,7 +599,7 @@ func _show_library() -> void:
 		_library_list.add_child(_level_card(entry.level, entry.path, entry.title))
 	if entries.is_empty():
 		_library_list.add_child(_label("Здесь появятся сохранённые уровни.", 18))
-	for template: Dictionary in [{"title": "Первый двор · шаблон", "path": "res://levels/level_01.tres"}, {"title": "Двор конур · шаблон", "path": "res://levels/kennel_yard.tres"}, {"title": "Двор с грузами · шаблон", "path": "res://levels/weight_yard.tres"}]:
+	for template: Dictionary in [{"title": "Первый двор · шаблон", "path": "res://levels/level_01.tres"}, {"title": "Двор конур · шаблон", "path": "res://levels/kennel_yard.tres"}, {"title": "Двор с грузами · шаблон", "path": "res://levels/weight_yard.tres"}, {"title": "Пружинный двор · шаблон", "path": "res://levels/spring_yard.tres"}]:
 		_library_list.add_child(_level_card(LevelLibrary.load_level(template.path), template.path, tr(template.title)))
 	_library_dialog.popup_centered()
 
@@ -817,7 +817,7 @@ func _restore_history() -> void:
 
 
 func _signature(value: LevelDefinition) -> String:
-	return var_to_str([value.title, value.biome, value.shots, value.dog_positions, value.dog_house_materials, value.dog_house_types, value.block_positions, value.block_sizes, value.block_materials, value.weight_positions, value.cat_sequence, value.dog_kinds, value.tutorial, value.par_shots, value.author_completion])
+	return var_to_str([value.title, value.biome, value.shots, value.dog_positions, value.dog_house_materials, value.dog_house_types, value.block_positions, value.block_sizes, value.block_materials, value.weight_positions, value.spring_positions, value.cat_sequence, value.dog_kinds, value.tutorial, value.par_shots, value.author_completion])
 
 
 func _on_title_changed(value: String) -> void:
@@ -918,6 +918,8 @@ func _update_actions() -> void:
 		if not draft.dog_house_material_at(index).is_empty():
 			house_count += 1
 	_status.text = tr("%s · собак: %d · будок: %d · блоков: %d%s") % [state, draft.dog_positions.size(), house_count, draft.block_positions.size(), hint]
+	if not draft.spring_positions.is_empty():
+		_status.text += " · " + tr("Пружины: %d") % draft.spring_positions.size()
 	if draft.is_author_completed():
 		_status.text += " · " + tr("Пройден автором")
 	if _recovered:
@@ -942,6 +944,8 @@ func _update_selection() -> void:
 	_selection_label.text = (tr("Собака") if canvas.selected_kind == 0 else tr("Блок")) if selected else tr("Ничего не выбрано")
 	if canvas.selected_kind == 2:
 		_selection_label.text = tr("Подвешенный груз") + "\n" + tr("Попади в верёвку — груз упадёт и разрушит постройку.")
+	if canvas.selected_kind == 3:
+		_selection_label.text = tr("Пружина") + "\n" + tr("Подбрасывает котов, блоки и свободные грузы вверх. Каждое тело — один раз за попытку.")
 	var selected_material := canvas.selected_material()
 	if not selected_material.is_empty():
 		var material_index := BlockMaterials.IDS.find(selected_material)

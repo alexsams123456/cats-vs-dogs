@@ -65,6 +65,8 @@ var _help_description: Label
 var _touch_ui: bool = false
 var _flying: bool = false
 var _result_shown: bool = false
+var _tv_angle: float = 35.0
+var _tv_power: float = 1.0
 
 
 func _ready() -> void:
@@ -116,6 +118,9 @@ func _ready() -> void:
 	_build_footer(column)
 	_build_overlay()
 	set_touch_ui(OS.has_feature("mobile") or DisplayServer.is_touchscreen_available())
+	if TVControls.is_enabled():
+		for button: Button in [_pause_button, _ability_button, _help_button, _camera_button]:
+			button.focus_mode = Control.FOCUS_NONE
 	get_viewport().size_changed.connect(_update_safe_margins)
 	_update_safe_margins()
 
@@ -148,7 +153,7 @@ func _build_footer(column: VBoxContainer) -> void:
 	row.add_child(_current_portrait)
 	var identity := VBoxContainer.new()
 	identity.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	identity.custom_minimum_size.x = 220
+	identity.custom_minimum_size.x = 140 if TVControls.is_enabled() else 220
 	identity.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(identity)
 	_current_name = _label("", 20)
@@ -162,9 +167,14 @@ func _build_footer(column: VBoxContainer) -> void:
 	_hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if TVControls.is_enabled():
+		var hint_background := _style(Color("fff7e8"))
+		hint_background.content_margin_top = 8
+		hint_background.content_margin_bottom = 8
+		_hint.add_theme_stylebox_override("normal", hint_background)
 	footer.add_child(_hint)
 	_ability_button = _button("", ability_requested.emit)
-	_ability_button.custom_minimum_size = Vector2(220, 56)
+	_ability_button.custom_minimum_size = Vector2(180 if TVControls.is_enabled() else 220, 56)
 	_ability_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_ability_button.add_theme_stylebox_override("normal", _style(Color("f6c15f")))
 	_ability_button.add_theme_stylebox_override("hover", _style(Color("ffce78")))
@@ -261,6 +271,14 @@ func set_tutorial_hint(message: String) -> void:
 	if _result_shown:
 		return
 	_hint.text = tr(message) if not message.is_empty() else _default_hint
+	if TVControls.is_enabled():
+		_hint.text = "OK — способность · Назад — пауза" if _flying else "↑↓ угол %d° · ←→ сила %d%%\nOK — бросок · Назад — пауза" % [roundi(_tv_angle), roundi(_tv_power * 100.0)]
+
+
+func set_tv_aim(angle: float, power: float) -> void:
+	_tv_angle = angle
+	_tv_power = power
+	set_tutorial_hint(_tutorial_hint)
 
 
 func refresh_desktop_help() -> void:
@@ -371,6 +389,8 @@ func _refresh_input_hints() -> void:
 	if _result_shown:
 		return
 	_camera_hint.text = tr("Два пальца: масштаб и перемещение двора." if _touch_ui else "Колесо мыши: приблизить или отдалить двор.")
+	if TVControls.is_enabled():
+		_camera_hint.text = "Пульт: ↑↓ угол · ←→ сила · OK бросок / способность · Назад пауза"
 	if _cat_definition == null:
 		return
 	var active := not _cat_definition.ability_action.is_empty()
@@ -383,6 +403,10 @@ func _refresh_input_hints() -> void:
 	if active:
 		hint = tr("Коснись игрового поля в полёте, до удара.") if _touch_ui else tr("Кликни по игровому полю или нажми %s в полёте, до удара.") % key_name
 	_power_hint.text = tr(_cat_definition.display_name) + ": " + hint
+	if TVControls.is_enabled():
+		_ability_button.text = tr(_cat_definition.ability_action) + " · OK"
+		if active:
+			_power_hint.text = tr(_cat_definition.display_name) + ": OK в полёте, до удара."
 
 
 func _toggle_help() -> void:
@@ -520,6 +544,8 @@ func _build_overlay() -> void:
 
 func _update_safe_margins() -> void:
 	var margins := Vector4(28, 22, 28, 22)
+	if TVControls.is_enabled():
+		margins = Vector4(48, 36, 48, 36)
 	if OS.has_feature("mobile"):
 		var safe := DisplayServer.get_display_safe_area()
 		var screen := DisplayServer.screen_get_size()

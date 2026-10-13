@@ -64,7 +64,7 @@ static func parse_document(text: String) -> LevelDefinition:
 	var fields: Dictionary = data.level
 	# Внешний файл не может назначать script, пути или произвольные свойства.
 	for key: Variant in fields:
-		if key not in ["title", "shots", "biome", "dog_positions", "block_positions", "weight_positions", "block_sizes", "block_materials", "dog_house_materials", "dog_house_types", "cat_sequence", "dog_kinds", "tutorial", "par_shots", "author_completion"]:
+		if key not in ["title", "shots", "biome", "dog_positions", "block_positions", "weight_positions", "spring_positions", "block_sizes", "block_materials", "dog_house_materials", "dog_house_types", "cat_sequence", "dog_kinds", "tutorial", "par_shots", "author_completion"]:
 			return null
 	return LevelData.from_dictionary(fields)
 

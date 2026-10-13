@@ -103,6 +103,8 @@ try {
     [void](Invoke-GodotCheck -Name 'import' -Arguments $ImportArguments)
 
     Write-Host 'Running smoke tests...'
+    $TvArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'tv-controls.log'), '--script', 'res://tests/tv_controls_test.gd', '--', '--tv')
+    Write-Host (Invoke-GodotCheck -Name 'tv-controls' -Arguments $TvArguments)
     $BackdropArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'backdrop-cache.log'), '--script', 'res://tests/backdrop_cache_test.gd')
     Write-Host (Invoke-GodotCheck -Name 'backdrop-cache' -Arguments $BackdropArguments)
     $SceneryArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'scenery-cache.log'), '--script', 'res://tests/scenery_cache_test.gd')
@@ -137,6 +139,8 @@ try {
     $CatAbilitiesOutput = Invoke-GodotCheck -Name 'cat-abilities' -Arguments $CatAbilitiesArguments
     Write-Host $CatAbilitiesOutput
     Write-Host 'Running animation and audio checks...'
+    $GloatArguments = @('--headless', '--fixed-fps', '60', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'dog-gloat.log'), '--script', 'res://tests/dog_gloat_test.gd')
+    Write-Host (Invoke-GodotCheck -Name 'dog-gloat' -Arguments $GloatArguments)
     $PatrolArguments = @('--headless', '--fixed-fps', '60', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'dog-patrol.log'), '--script', 'res://tests/dog_patrol_test.gd')
     Write-Host (Invoke-GodotCheck -Name 'dog-patrol' -Arguments $PatrolArguments)
     $AnimationArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'animation.log'), '--script', 'res://tests/animation_test.gd')
@@ -165,6 +169,9 @@ try {
     $EditorArguments = @('--headless', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'editor.log'), '--script', 'res://tests/editor_test.gd')
     $EditorOutput = Invoke-GodotCheck -Name 'editor' -Arguments $EditorArguments
     Write-Host $EditorOutput
+    Write-Host 'Running spring interaction checks...'
+    $SpringArguments = @('--headless', '--fixed-fps', '60', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'spring-pad.log'), '--script', 'res://tests/spring_pad_test.gd')
+    Write-Host (Invoke-GodotCheck -Name 'spring-pad' -Arguments $SpringArguments)
     Write-Host 'Running building templates and layout review checks...'
     $BuildingsArguments = @('--headless', '--fixed-fps', '60', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'building-templates.log'), '--script', 'res://tests/building_templates_test.gd')
     Write-Host (Invoke-GodotCheck -Name 'building-templates' -Arguments $BuildingsArguments)
@@ -184,6 +191,9 @@ try {
     Write-Host 'Running screen transition checks...'
     $TransitionArguments = @('--headless', '--fixed-fps', '60', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'screen-transition.log'), '--script', 'res://tests/screen_transition_test.gd')
     Write-Host (Invoke-GodotCheck -Name 'screen-transition' -Arguments $TransitionArguments)
+    Write-Host 'Checking first level startup with two physics steps per rendered frame...'
+    $StartupPhysicsArguments = @('--headless', '--fixed-fps', '30', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'first-level-stability.log'), '--script', 'res://tests/first_level_stability_test.gd')
+    Write-Host (Invoke-GodotCheck -Name 'first-level-stability' -Arguments $StartupPhysicsArguments)
     Write-Host 'Replaying campaign physics routes...'
     $RoutesArguments = @('--headless', '--fixed-fps', '60', '--path', $ProjectRoot, '--log-file', (Join-Path $ArtifactsPath 'campaign-routes.log'), '--script', 'res://tools/solve_campaign.gd')
     Write-Host (Invoke-GodotCheck -Name 'campaign-routes' -Arguments $RoutesArguments)

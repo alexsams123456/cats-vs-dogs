@@ -337,6 +337,7 @@ func _build_footer(content: VBoxContainer) -> void:
 	editor_button.add_theme_stylebox_override("pressed", _style(Color("dfdfcc"), 15))
 	editor_button.pressed.connect(editor_requested.emit)
 	row.add_child(editor_button)
+	editor_button.visible = not TVControls.is_enabled()
 	play_button = _button("Свободный бой", Vector2(208, 60))
 	play_button.add_theme_font_size_override("font_size", 22)
 	play_button.add_theme_stylebox_override("normal", _style(ORANGE, 15))

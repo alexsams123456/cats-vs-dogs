@@ -1,16 +1,18 @@
-[gd_resource type="Resource" script_class="LevelDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="LevelDefinition" format=3 uid="uid://3lpfnsxas8br"]
 
-[ext_resource type="Script" path="res://scripts/levels/level_definition.gd" id="1"]
+[ext_resource type="Script" uid="uid://n8twykmrmsc8" path="res://scripts/levels/level_definition.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
 title = "Лестница ветра"
-biome = "backyard"
-shots = 4
 dog_positions = PackedVector2Array(760, 595, 1010, 455, 1130, 595)
-block_positions = PackedVector2Array(685.0, 570.0, 835.0, 570.0, 760, 510, 920.0, 560.0, 1100.0, 560.0, 1010, 490)
+block_positions = PackedVector2Array(685, 570, 835, 570, 760, 510, 920, 560, 1100, 560, 1010, 490)
+weight_positions = null
+spring_positions = null
 block_sizes = PackedVector2Array(28, 100, 28, 100, 178, 20, 28, 120, 28, 120, 208, 20)
 block_materials = PackedStringArray("wood", "wood", "glass", "wood", "wood", "wood")
+dog_house_materials = null
+dog_house_types = null
 cat_sequence = PackedStringArray("wind", "splitter", "homing", "homing")
-dog_kinds = PackedStringArray("scout", "scout", "scout")
+dog_kinds = PackedStringArray("scout", "scout", "runner")
 par_shots = 2

@@ -37,13 +37,13 @@ func _run() -> void:
 
 func _test_variants() -> void:
 	var world := _make_world()
-	var streams: Array[AudioStreamWAV] = [DogVoice.BARK_SCOUT, DogVoice.BARK_ARMORED, DogVoice.BARK_JUMPER]
+	var streams: Array[AudioStreamWAV] = [DogVoice.BARK_SCOUT, DogVoice.BARK_ARMORED, DogVoice.BARK_JUMPER, DogVoice.BARK_SCOUT, DogVoice.BARK_SCOUT]
 	for index in CharacterCatalog.DOGS.size():
 		var dog := _make_dog(world, CharacterCatalog.DOGS[index])
 		var voice := dog.get_node("Voice") as DogVoice
 		_check(voice.stream == streams[index], "Dog variant selects its own bark")
 		_check(voice.bus == &"SFX" and voice.max_polyphony == 1, "Each dog has one voice routed through SFX")
-		_check(voice.volume_db >= -6.0 and voice.volume_db <= -3.0, "Bark remains audible over the -18 dB background music")
+		_check(voice.volume_db >= -12.0 and voice.volume_db <= -9.0, "Bark leaves comfortable headroom over the -18 dB background music")
 	var fallback := _make_dog(world)
 	_check((fallback.get_node("Voice") as DogVoice).stream == DogVoice.BARK_SCOUT, "Dog without a definition uses the scout bark")
 	_check(fallback.bark_cooldown_seconds >= 0.6 and fallback.bark_cooldown_seconds <= 1.0, "Default bark cadence leaves a short audible pause")

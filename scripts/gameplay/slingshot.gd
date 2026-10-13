@@ -5,7 +5,7 @@ extends Node2D
 signal launched(projectile: CatProjectile)
 signal tension_started
 
-@export var max_pull: float = 105.0
+@export var max_pull: float = 150.0
 @export var launch_speed: float = 5.0
 
 const FLIGHT_SPEED_SCALE: float = 0.5
@@ -51,6 +51,19 @@ func cancel_drag() -> void:
 	if is_instance_valid(loaded_projectile):
 		loaded_projectile.global_position = global_position
 		loaded_projectile.set_aiming(false)
+	queue_redraw()
+
+
+func preview_remote_pull(pull: Vector2) -> void:
+	if not _enabled or not is_instance_valid(loaded_projectile) or _pointer_index != NO_POINTER:
+		return
+	is_dragging = true
+	_pull = pull.limit_length(max_pull)
+	loaded_projectile.global_position = global_position + _pull
+	loaded_projectile.set_aiming(true)
+	if not _tension_reported and _pull.length() >= MIN_PULL:
+		_tension_reported = true
+		tension_started.emit()
 	queue_redraw()
 
 

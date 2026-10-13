@@ -18,7 +18,7 @@ var _idle_pack_cooldown_left: float = 0.0
 
 func _ready() -> void:
 	bus = &"SFX"
-	volume_db = -6.0
+	volume_db = -9.0
 	max_polyphony = 1
 	add_to_group(VOICE_GROUP)
 	_dog = get_parent() as DogTarget

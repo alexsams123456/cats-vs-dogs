@@ -23,7 +23,14 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 function Invoke-WebGodot {
     param([string]$Name, [string[]]$EngineArguments, [switch]$AllowInitialImportErrors)
     $LogPath = Join-Path $ArtifactsRoot "$Name.log"
-    & $GodotPath @EngineArguments *> $LogPath
+    # Windows PowerShell treats native stderr as errors; validate the captured log below.
+    $PreviousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        & $GodotPath @EngineArguments *> $LogPath
+    } finally {
+        $ErrorActionPreference = $PreviousErrorActionPreference
+    }
     if ($LASTEXITCODE -ne 0 -and -not $AllowInitialImportErrors) { throw "Godot failed. See $LogPath" }
     if (-not $AllowInitialImportErrors -and (Select-String -LiteralPath $LogPath -Pattern '(^ERROR:|SCRIPT ERROR:)' -Quiet)) {
         throw "Godot reported errors. See $LogPath"
@@ -51,12 +58,13 @@ try {
     }
     New-Item -ItemType Directory -Force (Join-Path $WorkspaceRoot 'build/web') | Out-Null
     $env:APPDATA = $ProfileRoot
-    # Первый импорт создаёт шрифты, на которые уже ссылается тема проекта.
+    # Первые проходы создают переводы и шрифты, на которые уже ссылаются ресурсы.
     Invoke-WebGodot -Name 'web-first-import' -EngineArguments @('--headless', '--path', $WorkspaceRoot, '--editor', '--import', '--quit') -AllowInitialImportErrors
+    Invoke-WebGodot -Name 'web-second-import' -EngineArguments @('--headless', '--path', $WorkspaceRoot, '--editor', '--import', '--quit') -AllowInitialImportErrors
     Invoke-WebGodot -Name 'web-import' -EngineArguments @('--headless', '--path', $WorkspaceRoot, '--editor', '--import', '--quit')
     Invoke-WebGodot -Name 'web-export' -EngineArguments @('--headless', '--path', $WorkspaceRoot, '--export-release', 'Web', 'build/web/index.html')
     Copy-Item -Path (Join-Path $WorkspaceRoot 'build/web/*') -Destination $OutputRoot -Force
-    # Значок домашнего экрана iOS отдельный; favicon и графика самой игры прежние.
+    # Отдельный размер утверждённой иконки для домашнего экрана iOS.
     Copy-Item -LiteralPath (Join-Path $ProjectRoot 'assets/icons/apple_touch.png') -Destination (Join-Path $OutputRoot 'index.apple-touch-icon.png') -Force
     # Отдельные файлы совместимы с хостингом, запрещающим inline-скрипты.
     $HtmlPath = Join-Path $OutputRoot 'index.html'
@@ -67,6 +75,10 @@ try {
     [System.IO.File]::WriteAllText((Join-Path $OutputRoot 'game.css'), $StyleMatch.Groups[1].Value, $Utf8)
     [System.IO.File]::WriteAllText((Join-Path $OutputRoot 'game-loader.js'), $ScriptMatch.Groups[1].Value, $Utf8)
     $HtmlText = $HtmlText.Replace($StyleMatch.Value, '<link rel="stylesheet" href="game.css">').Replace($ScriptMatch.Value, '<script src="game-loader.js"></script>')
+    foreach ($IconName in @('index.icon.png', 'index.apple-touch-icon.png')) {
+        $IconRevision = (Get-FileHash -LiteralPath (Join-Path $OutputRoot $IconName) -Algorithm SHA256).Hash.Substring(0, 12).ToLowerInvariant()
+        $HtmlText = $HtmlText.Replace(('href="' + $IconName + '"'), ('href="' + $IconName + '?v=' + $IconRevision + '"'))
+    }
     [System.IO.File]::WriteAllText($HtmlPath, $HtmlText, $Utf8)
     foreach ($CompressedName in @('index.wasm', 'index.pck')) {
         $TargetPath = Join-Path $OutputRoot $CompressedName

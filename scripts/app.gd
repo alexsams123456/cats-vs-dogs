@@ -95,6 +95,10 @@ func _ready() -> void:
 		SoundControls.set_volume(&"Music", profile.music_volume)
 		SoundControls.set_volume(&"SFX", profile.effects_volume)
 	_open_campaign()
+	if TVControls.is_enabled():
+		var controls := TVControls.new()
+		controls.name = "TVControls"
+		add_child(controls)
 	if show_startup_intro:
 		_play_startup_intro()
 

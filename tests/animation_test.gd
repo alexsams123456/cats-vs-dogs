@@ -31,6 +31,7 @@ func _run() -> void:
 	cat.gravity_scale = 0.0
 	world.add_child(cat)
 	var voice := cat.get_node("Voice") as CatVoice
+	_check(voice.volume_db >= -16.0 and voice.volume_db <= -13.0, "Meow leaves comfortable headroom for other effects")
 	await create_timer(0.2).timeout
 	_check(backdrop.animation_time > 0.0 and cat.visual_time > 0.0, "Idle world and hero animate")
 	_check(voice.play_count == 0 and cat.meow_count == 0, "Waiting cat stays quiet")

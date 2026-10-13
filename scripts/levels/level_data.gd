@@ -18,6 +18,9 @@ static func to_dictionary(level: LevelDefinition, include_completion: bool = tru
 		"dog_kinds": Array(level.dog_kinds),
 		"tutorial": String(level.tutorial), "par_shots": level.par_shots,
 	}
+	# Пустое поле не меняет отпечатки уровней, созданных до появления пружин.
+	if not level.spring_positions.is_empty():
+		data["spring_positions"] = _write_vectors(level.spring_positions)
 	if include_completion and level.is_author_completed():
 		data["author_completion"] = level.author_completion.duplicate(true)
 	return data
@@ -47,6 +50,10 @@ static func from_dictionary(data: Dictionary, editable: bool = false) -> LevelDe
 	if weights == null:
 		return null
 	level.weight_positions = weights
+	var springs: Variant = _read_vectors(data.get("spring_positions", []))
+	if springs == null:
+		return null
+	level.spring_positions = springs
 	for key: String in ["block_materials", "dog_house_materials", "dog_house_types", "cat_sequence", "dog_kinds"]:
 		var strings: Variant = _read_strings(data.get(key, []))
 		if strings == null:

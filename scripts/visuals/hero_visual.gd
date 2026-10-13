@@ -38,6 +38,11 @@ static func paint(canvas: CanvasItem, species: StringName, kind: StringName, fur
 	elif expression == &"alert" and not cat:
 		canvas.draw_line(Vector2(29, -22), Vector2(30, -27), GOLD, 2.3, true)
 		canvas.draw_circle(Vector2(28.5, -18.5), 1.3, GOLD)
+	elif expression == &"gloat" and not cat:
+		var bounce: float = sin(time * 9.0 + phase) * 1.5
+		canvas.draw_line(Vector2(-32, -17 + bounce), Vector2(-37, -20 + bounce), GOLD, 2.0, true)
+		canvas.draw_line(Vector2(-33, -8 + bounce), Vector2(-39, -8 + bounce), GOLD, 2.0, true)
+		canvas.draw_line(Vector2(31, -21 - bounce), Vector2(35, -26 - bounce), GOLD, 2.0, true)
 
 
 static func paint_body(canvas: CanvasItem, species: StringName, kind: StringName, fur: Color, accent: Color, time: float, phase: float, expression: StringName) -> void:
@@ -117,7 +122,8 @@ static func _markings(canvas: CanvasItem, kind: StringName, accent: Color, cat: 
 static func _face(canvas: CanvasItem, accent: Color, time: float, phase: float, expression: StringName, cat: bool) -> void:
 	var blink: float = _blink(time, phase)
 	var smile: float = _idle_smile(time, phase) if expression == &"idle" else 0.0
-	if expression == &"celebrate":
+	var gloating: bool = expression == &"gloat" and not cat
+	if expression == &"celebrate" or gloating:
 		smile = 1.0
 		blink = 0.0
 	var gaze := Vector2(sin(time * 1.25 + phase) * 0.85, 0.3 - smile * 0.25)
@@ -136,7 +142,10 @@ static func _face(canvas: CanvasItem, accent: Color, time: float, phase: float, 
 		gaze = Vector2.from_angle(time * 10.0 + phase)
 	for side in [-1.0, 1.0]:
 		var eye := Vector2(side * 8.5, -3.4)
-		_eye(canvas, eye, accent, gaze, blink, expression)
+		if gloating:
+			canvas.draw_arc(eye + Vector2(0, 1.0), 4.8, PI + 0.2, TAU - 0.2, 10, INK, 1.7, true)
+		else:
+			_eye(canvas, eye, accent, gaze, blink, expression)
 		_ellipse(canvas, Vector2(side * 15.6, 7.7 - smile * 0.6), Vector2(4.6, 2.8), Color(BLUSH, 0.42 + smile * 0.16))
 		if expression == &"aim":
 			canvas.draw_line(eye + Vector2(-4, -8.0 - side), eye + Vector2(4, -8.0 + side), INK, 1.25, true)
@@ -184,6 +193,11 @@ static func _mouth(canvas: CanvasItem, expression: StringName, cat: bool, smile:
 	canvas.draw_line(Vector2(0, 8), Vector2(0, y), INK, 1.05, true)
 	if expression == &"hit":
 		_ellipse(canvas, Vector2(0, y + 2.5), Vector2(3.0, 4.0), INK)
+	elif expression == &"gloat" and not cat:
+		_ellipse(canvas, Vector2(0, y + 1.8), Vector2(7.2, 4.4), INK)
+		canvas.draw_line(Vector2(-4.6, y - 0.3), Vector2(4.6, y - 0.3), WHITE, 1.6, true)
+		_ellipse(canvas, Vector2(0, y + 4.0), Vector2(4.2, 2.0), BLUSH)
+		canvas.draw_line(Vector2(0, y + 2.9), Vector2(0, y + 4.6), BLUSH.darkened(0.16), 0.8, true)
 	elif expression == &"defeated":
 		canvas.draw_arc(Vector2(0, y - 0.5), 3.8, 0.0, PI, 12, INK, 1.3, true)
 		_ellipse(canvas, Vector2(2.5, y + 3.4), Vector2(2.3, 3.0), BLUSH)
@@ -221,12 +235,18 @@ static func _accessories(canvas: CanvasItem, kind: StringName, fur: Color, accen
 			_polygon(canvas, [Vector2(-15, 19), Vector2(15, 19), Vector2(0, 31)], accent, true)
 			_polygon(canvas, [Vector2(13, 20), Vector2(26, 17 + motion), Vector2(23, 26 + motion)], accent, true)
 			_star(canvas, Vector2(0, 23.5), 2.4, 0.0, CREAM)
+		elif kind == &"rover":
+			_polygon(canvas, [Vector2(-13, 19), Vector2(13, 19), Vector2(0, 30)], accent, true)
+			canvas.draw_arc(Vector2(0, 23), 3.0, -PI * 0.5, PI * 0.5, 8, CREAM, 1.5, true)
+		elif kind == &"runner":
+			_polygon(canvas, [Vector2(-17, -22), Vector2(17, -22), Vector2(16, -18), Vector2(-16, -18)], accent, true)
+			_polygon(canvas, [Vector2(1, 20), Vector2(-4, 25), Vector2(0, 25), Vector2(-2, 30), Vector2(5, 23), Vector2(1, 23)], GOLD, true)
 		else:
 			canvas.draw_circle(Vector2(0, 25), 4.0, INK)
 			canvas.draw_circle(Vector2(0, 25), 3.2, GOLD)
 			canvas.draw_circle(Vector2(-0.8, 24), 1.0, CREAM)
 	for side in [-1.0, 1.0]:
-		var paw := Vector2(side * 15, 21.5 + (motion * side * 0.4 if kind == &"jumper" else 0.0))
+		var paw := Vector2(side * 15, 21.5 + (motion * side * 0.4 if kind in [&"jumper", &"rover", &"runner"] else 0.0))
 		_ellipse(canvas, paw, Vector2(6.3, 4.5), fur.lightened(0.1), true)
 		for offset in [-1.4, 1.4]:
 			canvas.draw_line(paw + Vector2(offset, 1.3), paw + Vector2(offset, 3.3), fur.darkened(0.3), 0.8, true)

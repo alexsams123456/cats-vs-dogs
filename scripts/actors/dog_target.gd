@@ -12,6 +12,9 @@ const JUMP_COOLDOWN: float = 1.8
 const MAX_JUMPS: int = 2
 const MAX_BARKS_PER_CAT: int = 2
 const BARK_PROXIMITY: float = 550.0
+const GLOAT_DURATION: float = 1.65
+const GLOAT_NOTICE_DELAY: float = 0.45
+const GLOAT_DANGER_DISTANCE: float = 160.0
 
 @export var definition: CharacterDefinition
 @export_range(0.1, 10.0) var bark_cooldown_seconds: float = 0.9
@@ -39,11 +42,15 @@ var _bark_time_left: float = 0.0
 var _last_barked_cat_id: int = 0
 var _barks_for_cat: int = 0
 var _idle_bark_delay_left: float = 0.0
+var _gloat_time_left: float = 0.0
+var _gloat_scan_left: float = 0.0
 var patrol_enabled: bool = true
 var _patrol_origin_x: float = 0.0
 var _patrol_direction: float = -1.0
 var _patrol_driving: bool = false
 var _patrol_recovery_left: float = 0.0
+var _patrol_walk_time: float = 0.0
+var _patrol_rest_left: float = 0.0
 
 
 func _ready() -> void:
@@ -51,7 +58,7 @@ func _ready() -> void:
 	_visual_phase = float(get_instance_id() % 997) * 0.061
 	_idle_bark_delay_left = 0.7 + fmod(_visual_phase, 1.2)
 	_patrol_origin_x = global_position.x
-	if _kind() == &"jumper" and patrol_distance > 0.0 and patrol_speed > 0.0:
+	if _patrol_speed() > 0.0 and _patrol_distance() > 0.0:
 		can_sleep = false
 	queue_redraw()
 
@@ -80,6 +87,7 @@ func enter_shelter(house: DogHouse) -> void:
 func leave_shelter() -> void:
 	if not is_sheltered():
 		return
+	stop_gloating()
 	_follow_shelter()
 	var exit_velocity := shelter.linear_velocity
 	if shelter.destroyed.is_connected(leave_shelter):
@@ -119,10 +127,12 @@ func _process(delta: float) -> void:
 	_idle_bark_delay_left -= delta
 	if _idle_bark_delay_left <= 0.0:
 		_idle_bark_delay_left = 4.0 + fmod(_visual_phase, 4.0)
-		if _alert_time_left <= 0.0 and _bark_time_left <= 0.0 and frost_time_left <= 0.0 and not is_destroyed and not is_queued_for_deletion():
+		if not is_gloating() and _alert_time_left <= 0.0 and _bark_time_left <= 0.0 and frost_time_left <= 0.0 and not is_destroyed and not is_queued_for_deletion():
 			idle_bark_requested.emit()
 	if _surprise_time_left > 0.0:
 		expression = &"hit"
+	elif is_gloating():
+		expression = &"gloat"
 	elif _bark_time_left > 0.0:
 		expression = &"bark"
 	elif _alert_time_left > 0.0:
@@ -134,7 +144,7 @@ func _process(delta: float) -> void:
 
 
 func _update_alert() -> void:
-	if is_destroyed or is_queued_for_deletion() or frost_time_left > 0.0 or not can_process():
+	if is_gloating() or is_destroyed or is_queued_for_deletion() or frost_time_left > 0.0 or not can_process():
 		return
 	for actor: Node in get_parent().get_children():
 		var cat := actor as CatProjectile
@@ -167,13 +177,85 @@ func show_bark(duration: float) -> void:
 	if is_destroyed or is_queued_for_deletion():
 		return
 	_bark_time_left = duration
-	if _surprise_time_left <= 0.0:
+	if _surprise_time_left <= 0.0 and not is_gloating():
 		expression = &"bark"
 	queue_redraw()
 
 
+func start_gloating() -> void:
+	if is_gloating() or is_destroyed or is_queued_for_deletion() or frost_time_left > 0.0 or _surprise_time_left > 0.0 or not can_process():
+		return
+	_gloat_time_left = GLOAT_DURATION
+	_gloat_scan_left = 0.0
+	_alert_time_left = 0.0
+	expression = &"gloat"
+	# The existing voice keeps mute, pause and the pack's two-voice limit.
+	bark_requested.emit()
+	queue_redraw()
+
+
+func stop_gloating() -> void:
+	if not is_gloating():
+		return
+	_gloat_time_left = 0.0
+	_bark_time_left = 0.0
+	bark_interrupted.emit()
+	if expression == &"gloat":
+		expression = &"idle"
+	queue_redraw()
+
+
+func is_gloating() -> bool:
+	return _gloat_time_left > 0.0
+
+
+func _update_gloating(delta: float) -> void:
+	if not is_gloating():
+		return
+	if is_destroyed or frost_time_left > 0.0 or _gloat_time_left <= delta:
+		stop_gloating()
+		return
+	_gloat_time_left -= delta
+	if GLOAT_DURATION - _gloat_time_left < GLOAT_NOTICE_DELAY:
+		return
+	_gloat_scan_left -= delta
+	if _gloat_scan_left > 0.0:
+		return
+	_gloat_scan_left = 0.08
+	if not _gloat_danger_nearby():
+		return
+	stop_gloating()
+	_surprise_time_left = 0.6
+	expression = &"hit"
+	queue_redraw()
+
+
+func _gloat_danger_nearby() -> bool:
+	if not is_sheltered() and linear_velocity.y > 70.0:
+		return true
+	for actor: Node in get_parent().get_children():
+		var body := actor as RigidBody2D
+		if body == null or body is DogTarget or body.freeze or body.sleeping or body.is_queued_for_deletion():
+			continue
+		if not body is DestructibleBody and not body is CatProjectile:
+			continue
+		if body is DestructibleBody and body.is_destroyed:
+			continue
+		if body is CatProjectile and not body.was_launched:
+			continue
+		var body_radius: float = body.size.length() * 0.5 if body is WoodenBlock else 30.0
+		var incoming := global_position - body.global_position
+		if incoming.length() > GLOAT_DANGER_DISTANCE + body_radius:
+			continue
+		var relative_velocity := body.linear_velocity - linear_velocity
+		if relative_velocity.dot(incoming.normalized()) > 25.0 or absf(body.angular_velocity) > 0.8:
+			return true
+	return false
+
+
 func _physics_process(delta: float) -> void:
 	super._physics_process(delta)
+	_update_gloating(delta)
 	_patrol_recovery_left = maxf(0.0, _patrol_recovery_left - delta)
 	if is_sheltered():
 		_follow_shelter()
@@ -201,6 +283,7 @@ func _physics_process(delta: float) -> void:
 		if cat.linear_velocity.dot(incoming.normalized()) < 150.0:
 			continue
 		jumps_used += 1
+		stop_gloating()
 		_jump_cooldown_left = JUMP_COOLDOWN
 		_jump_ground_grace_left = 0.9
 		_surprise_time_left = 0.42
@@ -218,12 +301,14 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 
 
 func _update_patrol(state: PhysicsDirectBodyState2D) -> void:
-	if _kind() != &"jumper" or not patrol_enabled or patrol_distance <= 0.0 or patrol_speed <= 0.0:
+	var speed := _patrol_speed()
+	var distance := _patrol_distance()
+	if not patrol_enabled or distance <= 0.0 or speed <= 0.0:
 		return
 	if is_destroyed or freeze or is_sheltered() or _age < spawn_grace_seconds:
 		return
 	# An impact or an evasive jump keeps its real momentum until it settles.
-	if absf(state.linear_velocity.y) > 35.0 or absf(state.linear_velocity.x) > patrol_speed + 35.0 or absf(state.angular_velocity) > 3.0:
+	if absf(state.linear_velocity.y) > 35.0 or absf(state.linear_velocity.x) > speed + 35.0 or absf(state.angular_velocity) > 3.0:
 		_patrol_recovery_left = 0.5
 	if _patrol_recovery_left > 0.0 or state.get_contact_count() == 0:
 		return
@@ -231,17 +316,41 @@ func _update_patrol(state: PhysicsDirectBodyState2D) -> void:
 	# Patrol only solid ground. Moving structural supports keep ordinary physics.
 	if not _patrol_has_ground(origin):
 		return
-	if (origin.x - _patrol_origin_x) * _patrol_direction >= patrol_distance:
+	if (origin.x - _patrol_origin_x) * _patrol_direction >= distance:
 		_patrol_direction *= -1.0
 	if not _patrol_path_clear(origin, _patrol_direction):
 		_patrol_direction *= -1.0
-	var target_speed := patrol_speed * _patrol_direction if _patrol_path_clear(origin, _patrol_direction) else 0.0
+	var target_speed := speed * _patrol_direction if _patrol_path_clear(origin, _patrol_direction) else 0.0
+	if _patrol_is_resting(state.step):
+		target_speed = 0.0
 	var velocity := state.linear_velocity
 	velocity.x = move_toward(velocity.x, target_speed, 1200.0 * state.step)
 	state.linear_velocity = velocity
 	# The round body walks instead of rolling; knockback is handled above.
 	state.angular_velocity = clampf(-state.transform.get_rotation() * 12.0, -2.0, 2.0)
 	_patrol_driving = true
+
+
+func _patrol_speed() -> float:
+	return patrol_speed * definition.patrol_speed_scale if definition != null else 0.0
+
+
+func _patrol_distance() -> float:
+	return patrol_distance * definition.patrol_distance_scale if definition != null else 0.0
+
+
+func _patrol_is_resting(step: float) -> bool:
+	if definition.patrol_walk_seconds <= 0.0 or definition.patrol_rest_seconds <= 0.0:
+		return false
+	if _patrol_rest_left > 0.0:
+		_patrol_rest_left = maxf(0.0, _patrol_rest_left - step)
+		return true
+	_patrol_walk_time += step
+	if _patrol_walk_time < definition.patrol_walk_seconds:
+		return false
+	_patrol_walk_time = 0.0
+	_patrol_rest_left = definition.patrol_rest_seconds
+	return true
 
 
 func _patrol_has_ground(origin: Vector2) -> bool:
@@ -259,7 +368,7 @@ func _patrol_path_clear(origin: Vector2, direction: float) -> bool:
 
 
 func is_patrol_motion() -> bool:
-	return _patrol_driving and patrol_enabled and not freeze and not is_destroyed and absf(linear_velocity.y) < 22.0 and absf(linear_velocity.x) <= patrol_speed + 1.0 and absf(angular_velocity) < 3.0
+	return _patrol_driving and patrol_enabled and not freeze and not is_destroyed and absf(linear_velocity.y) < 22.0 and absf(linear_velocity.x) <= _patrol_speed() + 1.0 and absf(angular_velocity) < 3.0
 
 
 func apply_frost(duration: float) -> void:
@@ -267,6 +376,7 @@ func apply_frost(duration: float) -> void:
 		return
 	if frost_time_left <= 0.0:
 		_freeze_before_frost = freeze
+	stop_gloating()
 	frost_time_left = maxf(frost_time_left, duration)
 	_bark_time_left = 0.0
 	bark_interrupted.emit()
@@ -279,6 +389,7 @@ func apply_frost(duration: float) -> void:
 func receive_hit(strength: float) -> void:
 	if is_sheltered() or not _can_receive_hit(strength):
 		return
+	stop_gloating()
 	if shield_active:
 		shield_active = false
 		_hit_cooldown_left = hit_cooldown_seconds
@@ -336,8 +447,14 @@ func _accent_color() -> Color:
 	return definition.accent_color if definition != null else Color("72949a")
 
 
+func destroy() -> void:
+	stop_gloating()
+	super.destroy()
+
+
 func _on_destroyed() -> void:
 	# A single visual survives every defeat path; the physical target leaves now.
+	stop_gloating()
 	_show_defeat_effect()
 	defeated.emit()
 
@@ -350,7 +467,13 @@ func _draw() -> void:
 	if expression == &"hit":
 		visual_scale *= Vector2(0.95, 1.06)
 	var tilt := sin(visual_time * 1.6 + _visual_phase) * 0.028
-	draw_set_transform(Vector2(0, breath * 10.0), tilt, visual_scale)
+	var offset := Vector2(0, breath * 10.0)
+	if is_gloating():
+		var dance := sin((GLOAT_DURATION - _gloat_time_left) * 13.0 + _visual_phase)
+		tilt += dance * 0.16
+		offset.y -= absf(dance) * 7.0
+		visual_scale *= Vector2(1.0 + dance * 0.035, 1.0 - dance * 0.035)
+	draw_set_transform(offset, tilt, visual_scale)
 	HeroVisual.paint(self, &"dog", _kind(), fur, ear, visual_time, _visual_phase, expression, shield_active)
 	draw_set_transform(Vector2.ZERO)
 	if frost_time_left > 0.0:

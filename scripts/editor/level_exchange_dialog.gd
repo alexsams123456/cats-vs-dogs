@@ -167,6 +167,8 @@ func _summary(level: LevelDefinition) -> void:
 		thumbnail.hide()
 		return
 	summary.text = tr("%s · собак: %d · блоков: %d · грузов: %d · выстрелов: %d") % [level.title, level.dog_positions.size(), level.block_positions.size(), level.weight_positions.size(), level.shots]
+	if not level.spring_positions.is_empty():
+		summary.text += " · " + tr("Пружины: %d") % level.spring_positions.size()
 	thumbnail.draft = level
 	thumbnail.show()
 	thumbnail.queue_redraw()
